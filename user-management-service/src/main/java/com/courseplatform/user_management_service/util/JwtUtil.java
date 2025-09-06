@@ -21,20 +21,20 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${app.jwt.secret}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     /**
      * jwtExpiration should be milliseconds (eg. 86400000 for 24 hours).
      * If you store seconds in properties, convert to millis when used.
      */
-    @Value("${app.jwt.expiration}")
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     // Generate signing key from secret
     private Key getSigningKey() {
         if (jwtSecret == null) {
-            throw new IllegalStateException("JWT secret (app.jwt.secret) is not configured");
+            throw new IllegalStateException("JWT secret (jwt.secret) is not configured");
         }
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
