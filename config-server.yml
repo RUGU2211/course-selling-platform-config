@@ -2,18 +2,17 @@
 spring:
   application:
     name: config-server
+  cloud:
+    config:
+          server:
+            git:
+              uri: https://github.com/nottejas/course-selling-platf
+              default-label: main
+              clone-on-start: true
 
 server:
   port: 8888
 
-spring:
-  cloud:
-    config:
-      server:
-        git:
-          uri: https://github.com/nottejas/course-selling-platf
-          default-label: main
-          clone-on-start: true
 
 # If config-server registers with eureka (optional)
 eureka:
