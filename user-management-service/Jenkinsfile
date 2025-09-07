@@ -1,23 +1,31 @@
 pipeline {
     agent any
-
     tools {
-        jdk 'jdk-21'        // Configure in Jenkins Global Tool Config
-        maven 'maven-3.9'   // Configure Maven too
+        jdk 'jdk-21'
+        maven 'maven-3.9'
     }
-
     environment {
-        SERVICE_NAME = "user-management-service"
-        DOCKER_IMAGE = "rugved2211/${env.SERVICE_NAME}:${env.BUILD_NUMBER}"
+        SERVICE_NAME = "user-management-service"  // Change this per service
+        DOCKER_IMAGE = "rugved2211/${SERVICE_NAME}:${env.BUILD_NUMBER}"
     }
-
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/RUGU2211/course-selling-platf.git'
             }
         }
-
+        stage('Check Changes') {
+            steps {
+                script {
+                    def changes = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
+                    if (!changes.contains("${env.SERVICE_NAME}/")) {
+                        echo "No changes to ${env.SERVICE_NAME}, skipping build."
+                        currentBuild.result = 'SUCCESS'
+                        error("Skipping as no changes found")
+                    }
+                }
+            }
+        }
         stage('Build') {
             steps {
                 dir("${SERVICE_NAME}") {
@@ -25,11 +33,10 @@ pipeline {
                 }
             }
         }
-
         stage('Docker Build & Push') {
             steps {
-                dir("${SERVICE_NAME}") {
-                    script {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    dir("${SERVICE_NAME}") {
                         sh """
                         docker build -t ${DOCKER_IMAGE} .
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
@@ -39,12 +46,11 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy') {
             steps {
-                echo "Deploying ${SERVICE_NAME}..."
-                // Example for Docker Compose
-                sh "docker-compose up -d ${SERVICE_NAME}"
+                dir("${SERVICE_NAME}") {
+                    sh "docker-compose up -d --no-deps ${SERVICE_NAME}"
+                }
             }
         }
     }
