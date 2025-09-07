@@ -5,7 +5,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/RUGU2211/course-selling-platf.git',
+                    credentialsId: 'git'
             }
         }
         stage('Build') {
