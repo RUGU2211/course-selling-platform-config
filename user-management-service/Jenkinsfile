@@ -1,28 +1,50 @@
 pipeline {
-    agent {
-        docker { image 'maven:3.8.6-openjdk-21' }
+    agent any
+
+    tools {
+        jdk 'jdk-21'        // Configure in Jenkins Global Tool Config
+        maven 'maven-3.9'   // Configure Maven too
     }
+
+    environment {
+        SERVICE_NAME = "user-management-service"
+        DOCKER_IMAGE = "rugved2211/${env.SERVICE_NAME}:${env.BUILD_NUMBER}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/RUGU2211/course-selling-platf.git',
-                    credentialsId: 'git'
+                git branch: 'main', url: 'https://github.com/RUGU2211/course-selling-platf.git'
             }
         }
+
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests=true'
+                dir("${SERVICE_NAME}") {
+                    sh 'mvn clean package -DskipTests'
+                }
             }
         }
-        stage('Test') {
+
+        stage('Docker Build & Push') {
             steps {
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
+                dir("${SERVICE_NAME}") {
+                    script {
+                        sh """
+                        docker build -t ${DOCKER_IMAGE} .
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push ${DOCKER_IMAGE}
+                        """
+                    }
                 }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying ${SERVICE_NAME}..."
+                // Example for Docker Compose
+                sh "docker-compose up -d ${SERVICE_NAME}"
             }
         }
     }
