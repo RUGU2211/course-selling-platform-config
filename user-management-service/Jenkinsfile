@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        docker { image 'maven:3.8.6-openjdk-21' } // Maven + OpenJDK 21 image
+    }
     environment {
         IMAGE = "rugved2211/${env.JOB_NAME}"
         TAG = "${env.BUILD_NUMBER}"
