@@ -1,8 +1,12 @@
 pipeline {
-    agent any
+    agent {
+        docker { image 'maven:3.8.6-openjdk-21' }
+    }
     stages {
         stage('Checkout') {
-            steps { checkout scm }
+            steps {
+                checkout scm
+            }
         }
         stage('Build') {
             steps {
@@ -13,7 +17,11 @@ pipeline {
             steps {
                 sh 'mvn test'
             }
-            post { always { junit '**/target/surefire-reports/*.xml' } }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
         }
     }
 }
