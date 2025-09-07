@@ -4,54 +4,60 @@ import com.example.enrollmentservice.entity.Enrollment;
 import com.example.enrollmentservice.repository.EnrollmentRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class EnrollmentService {
 
-    private final EnrollmentRepository enrollmentRepository;
+    private final EnrollmentRepository repository;
 
-    public EnrollmentService(EnrollmentRepository enrollmentRepository) {
-        this.enrollmentRepository = enrollmentRepository;
+    public EnrollmentService(EnrollmentRepository repository) {
+        this.repository = repository;
     }
 
-    // Enroll in a course
+    // Enroll a student to a course
     public Enrollment enroll(Long studentId, Long courseId) {
         Enrollment enrollment = Enrollment.builder()
                 .studentId(studentId)
                 .courseId(courseId)
                 .progress(0)
                 .completed(false)
-                .enrolledAt(LocalDateTime.now())
+                .certificateUrl(null)
                 .build();
-        return enrollmentRepository.save(enrollment);
+        return repository.save(enrollment);
     }
 
-    // Get all courses for a student
-    public List<Enrollment> getStudentEnrollments(Long studentId) {
-        return enrollmentRepository.findByStudentId(studentId);
+    public List<Enrollment> getByStudentId(Long studentId) {
+        return repository.findByStudentId(studentId);
     }
 
-    // Update progress
-    public Optional<Enrollment> updateProgress(Long enrollmentId, int progress) {
-        return enrollmentRepository.findById(enrollmentId).map(enrollment -> {
+    public List<Enrollment> getByCourseId(Long courseId) {
+        return repository.findByCourseId(courseId);
+    }
+
+    public Optional<Enrollment> getById(Long id) {
+        return repository.findById(id);
+    }
+
+    public Enrollment updateProgress(Long id, int progress) {
+        Optional<Enrollment> opt = repository.findById(id);
+        if (opt.isPresent()) {
+            Enrollment enrollment = opt.get();
             enrollment.setProgress(progress);
-            if (progress >= 100) {
-                enrollment.setCompleted(true);
-            }
-            return enrollmentRepository.save(enrollment);
-        });
+            return repository.save(enrollment);
+        }
+        throw new RuntimeException("Enrollment not found");
     }
 
-    // Mark complete and generate certificate
-    public Optional<Enrollment> completeCourse(Long enrollmentId, String certificateUrl) {
-        return enrollmentRepository.findById(enrollmentId).map(enrollment -> {
-            enrollment.setCompleted(true);
-            enrollment.setProgress(100);
+    public Enrollment updateCompletion(Long id, boolean completed, String certificateUrl) {
+        Optional<Enrollment> opt = repository.findById(id);
+        if (opt.isPresent()) {
+            Enrollment enrollment = opt.get();
+            enrollment.setCompleted(completed);
             enrollment.setCertificateUrl(certificateUrl);
-            return enrollmentRepository.save(enrollment);
-        });
+            return repository.save(enrollment);
+        }
+        throw new RuntimeException("Enrollment not found");
     }
 }

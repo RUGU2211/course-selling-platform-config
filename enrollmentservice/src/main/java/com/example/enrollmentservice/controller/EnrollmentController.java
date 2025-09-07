@@ -1,57 +1,54 @@
 package com.example.enrollmentservice.controller;
 
-
-
 import com.example.enrollmentservice.entity.Enrollment;
 import com.example.enrollmentservice.service.EnrollmentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
-
-// DTO class to map JSON request body for enrolling
-
 
 @RestController
 @RequestMapping("/api/enrollments")
 public class EnrollmentController {
 
-    private final EnrollmentService enrollmentService;
+    private final EnrollmentService service;
 
-    public EnrollmentController(EnrollmentService enrollmentService) {
-        this.enrollmentService = enrollmentService;
+    public EnrollmentController(EnrollmentService service) {
+        this.service = service;
     }
 
-    // 1. Enroll in a course - accepts JSON body
     @PostMapping
-    public ResponseEntity<Enrollment> enroll(@RequestBody EnrollmentRequest request) {
-        Enrollment enrollment = enrollmentService.enroll(request.getStudentId(), request.getCourseId());
+    public ResponseEntity<Enrollment> enroll(@RequestBody EnrollmentRequest req) {
+        Enrollment saved = service.enroll(req.getStudentId(), req.getCourseId());
+        return ResponseEntity.ok(saved);
+    }
+
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<Enrollment>> getByStudent(@PathVariable Long studentId) {
+        return ResponseEntity.ok(service.getByStudentId(studentId));
+    }
+
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<List<Enrollment>> getByCourse(@PathVariable Long courseId) {
+        return ResponseEntity.ok(service.getByCourseId(courseId));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Enrollment> getById(@PathVariable Long id) {
+        return service.getById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/progress")
+    public ResponseEntity<Enrollment> updateProgress(@PathVariable Long id, @RequestBody ProgressRequest req) {
+        Enrollment enrollment = service.updateProgress(id, req.getProgress());
         return ResponseEntity.ok(enrollment);
     }
 
-    // 2. Get all courses for a student
-    @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<Enrollment>> getStudentEnrollments(@PathVariable Long studentId) {
-        return ResponseEntity.ok(enrollmentService.getStudentEnrollments(studentId));
-    }
-
-    // 3. Update progress
-    @PutMapping("/{id}/progress")
-    public ResponseEntity<Enrollment> updateProgress(
-            @PathVariable Long id,
-            @RequestParam int progress) {
-        Optional<Enrollment> updated = enrollmentService.updateProgress(id, progress);
-        return updated.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-    }
-
-    // 4. Mark complete
-    @PostMapping("/{id}/complete")
-    public ResponseEntity<Enrollment> completeCourse(
-            @PathVariable Long id,
-            @RequestParam String certificateUrl) {
-        Optional<Enrollment> completed = enrollmentService.completeCourse(id, certificateUrl);
-        return completed.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<Enrollment> updateCompletion(@PathVariable Long id, @RequestBody CompletionRequest req) {
+        Enrollment enrollment = service.updateCompletion(id, req.isCompleted(), req.getCertificateUrl());
+        return ResponseEntity.ok(enrollment);
     }
 }
-

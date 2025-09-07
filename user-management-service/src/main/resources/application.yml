@@ -3,7 +3,9 @@ spring:
     name: user-management-service
   config:
     activate:
-      on-profile: dev 
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/course_platform
 
 eureka:
   client:
