@@ -14,7 +14,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/RUGU2211/course-selling-platf.git'
+                checkout scm
             }
         }
 
