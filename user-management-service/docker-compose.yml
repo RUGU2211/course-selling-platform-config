@@ -1,35 +1,31 @@
-version: '3.8'
+version: "3.9"
+
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-db
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: course_platform
       MYSQL_USER: user
       MYSQL_PASSWORD: userpassword
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - mariadb_data:/var/lib/mysql
 
-  app:
+  user-management-service:
     build: .
-    container_name: springboot-app
+    container_name: user-management-service
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mariadb
     ports:
-      - "8090:8080"
+      - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/course_platform?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://mariadb:3306/course_platform
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: userpassword
 
 volumes:
-  mysql_data:
+  mariadb_data:
