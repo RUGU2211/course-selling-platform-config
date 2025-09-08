@@ -1,56 +1,52 @@
 pipeline {
     agent any
-    tools {
-        jdk 'jdk-21'
-        maven 'maven-3.9'
-    }
+
     environment {
-        SERVICE_NAME = "user-management-service"  // Change this per service
-        DOCKER_IMAGE = "rugved2211/${SERVICE_NAME}:${env.BUILD_NUMBER}"
+        DOCKER_IMAGE = "rugved2211/user-management-service:latest"
+        REGISTRY_CREDENTIALS = 'dockerhub-creds' // Jenkins credential ID for DockerHub
     }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/RUGU2211/course-selling-platf.git'
-            }
-        }
-        stage('Check Changes') {
-            steps {
-                script {
-                    def changes = sh(script: "git diff --name-only HEAD~1 HEAD", returnStdout: true).trim()
-                    if (!changes.contains("${env.SERVICE_NAME}/")) {
-                        echo "No changes to ${env.SERVICE_NAME}, skipping build."
-                        currentBuild.result = 'SUCCESS'
-                        error("Skipping as no changes found")
-                    }
-                }
+                checkout scm
             }
         }
         stage('Build') {
             steps {
-                dir("${SERVICE_NAME}") {
+                dir('user-management-service') {
                     sh 'mvn clean package -DskipTests'
                 }
             }
         }
-        stage('Docker Build & Push') {
+        stage('Test') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    dir("${SERVICE_NAME}") {
-                        sh """
-                        docker build -t ${DOCKER_IMAGE} .
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${DOCKER_IMAGE}
-                        """
+                dir('user-management-service') {
+                    sh 'mvn test'
+                }
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                dir('user-management-service') {
+                    script {
+                        docker.build(DOCKER_IMAGE, '.')
+                    }
+                }
+            }
+        }
+        stage('Docker Push') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', REGISTRY_CREDENTIALS) {
+                        docker.image(DOCKER_IMAGE).push()
                     }
                 }
             }
         }
         stage('Deploy') {
             steps {
-                dir("${SERVICE_NAME}") {
-                    sh "docker-compose up -d --no-deps ${SERVICE_NAME}"
-                }
+                echo 'Add deployment steps here (kubectl or docker-compose)'
             }
         }
     }
