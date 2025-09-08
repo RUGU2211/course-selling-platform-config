@@ -1,9 +1,18 @@
+// File path: /course-management-service/Jenkinsfile
+
 pipeline {
-    agent any
+    agent {
+        // Use a consistent environment
+        docker {
+            image 'maven:3.9.1-eclipse-temurin-17' 
+            args '-v $HOME/.m2:/root/.m2' 
+        }
+    }
 
     tools {
-        jdk 'jdk-21'        // Configure in Jenkins Global Tool Config
-        maven 'maven-3.9'   // Configure Maven too
+        // These names must exactly match the names configured in Jenkins
+        jdk 'JDK 17'        
+        maven 'Maven 3.9'
     }
 
     environment {
@@ -14,22 +23,25 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/RUGU2211/course-selling-platf.git'
+                // The Multibranch Pipeline job already handles the git checkout
+                // This step is redundant and can be removed
+                echo 'Skipping Git checkout as it is handled by the SCM'
             }
         }
 
-        stage('Build') {
+        stage('Build & Test') {
             steps {
-                dir("${SERVICE_NAME}") {
-                    sh 'mvn clean package -DskipTests'
-                }
+                // The `dir` step is not needed if the Jenkinsfile is in the service directory
+                echo "Building and testing ${SERVICE_NAME}..."
+                sh 'mvn clean package -DskipTests=false'
             }
         }
 
         stage('Docker Build & Push') {
             steps {
-                dir("${SERVICE_NAME}") {
-                    script {
+                script {
+                    echo "Building Docker image: ${DOCKER_IMAGE}"
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh """
                         docker build -t ${DOCKER_IMAGE} .
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
@@ -44,8 +56,14 @@ pipeline {
             steps {
                 echo "Deploying ${SERVICE_NAME}..."
                 // Example for Docker Compose
-                sh "docker-compose up -d ${SERVICE_NAME}"
+                sh "ssh user@your-server 'docker-compose -f /path/to/docker-compose.yml up -d ${SERVICE_NAME}'"
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
