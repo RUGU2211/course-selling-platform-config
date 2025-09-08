@@ -5,7 +5,7 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:mysql://mysql-db:3306/course_platform
+    url: jdbc:mysql://mysql-db:3307/course_platform
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
