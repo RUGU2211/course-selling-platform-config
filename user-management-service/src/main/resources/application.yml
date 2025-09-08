@@ -5,10 +5,7 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:mysql://mariadb:3306/course_platform
-    username: user
-    password: userpassword
-    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/course_platform
 
 eureka:
   client:
