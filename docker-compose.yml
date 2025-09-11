@@ -107,6 +107,26 @@ services:
     networks:
       - coursedb-net
 
+  content-delivery-service:
+    build: ./content-delivery-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/content_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_APPLICATION_NAME=content-delivery-service
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
+    networks:
+      - coursedb-net
+
   actuator:
     build: ./actuator
     ports:
@@ -131,6 +151,7 @@ services:
       - course-management-service
       - enrollmentservice
       - notification-service
+      - content-delivery-service
       - actuator
       - eureka-server
     networks:
