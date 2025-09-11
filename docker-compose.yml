@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: users_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - coursedb-net
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    ports:
+      - "8089:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - coursedb-net
+
+  eureka-server:
+    build: ./eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - coursedb-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  config-server:
+    build: ./config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka-server
+    networks:
+      - coursedb-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+
+  user-management-service:
+    build: ./user-management-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/users_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - coursedb-net
+
+  course-management-service:
+    build: ./course-management-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/courses_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - coursedb-net
+
+  enrollmentservice:
+    build: ./enrollmentservice
+    ports:
+      - "8084:8084"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enrollments_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - coursedb-net
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/notifications_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - coursedb-net
+
+  actuator:
+    build: ./actuator
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/actuator_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - coursedb-net
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8765:8765"
+    depends_on:
+      - user-management-service
+      - course-management-service
+      - enrollmentservice
+      - notification-service
+      - actuator
+      - eureka-server
+    networks:
+      - coursedb-net
+
+volumes:
+  mysql-data:
+  jenkins-data:
+
+networks:
+  coursedb-net:
