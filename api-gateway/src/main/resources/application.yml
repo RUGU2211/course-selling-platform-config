@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: user-management-service
+          uri: lb://user-management-service
+          predicates:
+            - Path=/api/users/**
+        - id: course-management-service
+          uri: lb://course-management-service
+          predicates:
+            - Path=/api/courses/**
+        - id: enrollment-service
+          uri: lb://enrollment-service
+          predicates:
+            - Path=/api/enrollments/**
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+eureka:
+  client:
+    service-url:
+      defaultZone: http://course-selling-platf-eureka-server-1:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+server:
+  port: 8765

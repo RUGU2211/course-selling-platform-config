@@ -1,14 +1,18 @@
 spring:
   application:
     name: user-management-service
-  config:
-    activate:
-      on-profile: dev
   datasource:
     url: jdbc:mysql://course-selling-platf-mysql-1:3307/users_db
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+server:
+  port: 8082
 
 eureka:
   client:
