@@ -107,6 +107,28 @@ services:
     networks:
       - coursedb-net
 
+  payment-service:
+    build: ./payment
+    ports:
+      - "8086:8086"
+    depends_on:
+      - mysql
+      - eureka-server
+      - config-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_APPLICATION_NAME=payment-service
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      - RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
+      - RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
+    networks:
+      - coursedb-net
+
   content-delivery-service:
     build: ./content-delivery-service
     ports:
@@ -151,6 +173,7 @@ services:
       - course-management-service
       - enrollmentservice
       - notification-service
+      - payment-service
       - content-delivery-service
       - actuator
       - eureka-server
