@@ -1,0 +1,19 @@
+# Environment Variables for Course Selling Platform
+# Copy these to your IDE environment or Docker environment
+
+# Razorpay Payment Gateway Credentials
+RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
+RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
+
+# Database Credentials (if needed for external connections)
+DB_USERNAME=root
+DB_PASSWORD=root
+
+# JWT Secrets (should be different for each service in production)
+JWT_SECRET=your-super-secure-jwt-secret-key-here-change-this-in-production
+
+# Instructions:
+# 1. For local development: Set these in your IDE environment variables
+# 2. For Docker: Add them to docker-compose.yml environment section
+# 3. For production: Use Docker secrets or cloud environment variables
+# 4. Never commit actual credentials to version control
