@@ -4,10 +4,10 @@ services:
   mysql:
     image: mysql:8
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: users_db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${USER_SERVICE_DB_NAME}
     ports:
-      - "3307:3306"
+      - "${MYSQL_EXTERNAL_PORT}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -16,7 +16,7 @@ services:
   jenkins:
     image: jenkins/jenkins:lts
     ports:
-      - "8089:8080"
+      - "${JENKINS_PORT}:8080"
       - "50000:50000"
     volumes:
       - jenkins-data:/var/jenkins_home
@@ -27,7 +27,7 @@ services:
   eureka-server:
     build: ./eureka-server
     ports:
-      - "8761:8761"
+      - "${EUREKA_SERVER_PORT}:8761"
     networks:
       - coursedb-net
     healthcheck:
@@ -39,111 +39,131 @@ services:
   config-server:
     build: ./config-server
     ports:
-      - "8888:8888"
+      - "${CONFIG_SERVER_PORT}:8888"
     depends_on:
       - eureka-server
     networks:
       - coursedb-net
     environment:
-      - SPRING_PROFILES_ACTIVE=default
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
 
   user-management-service:
     build: ./user-management-service
     ports:
-      - "8082:8082"
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/users_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${USER_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${USER_SERVICE_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${USER_SERVICE_DB_PASSWORD}
+      - SPRING_APPLICATION_NAME=user-management-service
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
       - coursedb-net
 
   course-management-service:
     build: ./course-management-service
     ports:
-      - "8083:8083"
+      - "${COURSE_SERVICE_PORT}:${COURSE_SERVICE_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/courses_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${COURSE_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${COURSE_SERVICE_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${COURSE_SERVICE_DB_PASSWORD}
+      - SPRING_APPLICATION_NAME=course-management-service
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
       - coursedb-net
 
   enrollmentservice:
     build: ./enrollmentservice
     ports:
-      - "8084:8084"
+      - "${ENROLLMENT_SERVICE_PORT}:${ENROLLMENT_SERVICE_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enrollments_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${ENROLLMENT_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${ENROLLMENT_SERVICE_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${ENROLLMENT_SERVICE_DB_PASSWORD}
+      - SPRING_APPLICATION_NAME=enrollmentservice
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
       - coursedb-net
 
   notification-service:
     build: ./notification-service
     ports:
-      - "8085:8085"
+      - "${NOTIFICATION_SERVICE_PORT}:${NOTIFICATION_SERVICE_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/notifications_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${NOTIFICATION_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${NOTIFICATION_SERVICE_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${NOTIFICATION_SERVICE_DB_PASSWORD}
+      - SPRING_APPLICATION_NAME=notification-service
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
       - coursedb-net
 
   payment-service:
     build: ./payment
     ports:
-      - "8086:8086"
+      - "${PAYMENT_SERVICE_PORT}:${PAYMENT_SERVICE_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${PAYMENT_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${PAYMENT_SERVICE_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${PAYMENT_SERVICE_DB_PASSWORD}
       - SPRING_APPLICATION_NAME=payment-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
       - EUREKA_CLIENT_FETCH_REGISTRY=true
-      - RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
-      - RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
     networks:
       - coursedb-net
 
   content-delivery-service:
     build: ./content-delivery-service
     ports:
-      - "8087:8087"
+      - "${CONTENT_SERVICE_PORT}:${CONTENT_SERVICE_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/content_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${CONTENT_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${CONTENT_SERVICE_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${CONTENT_SERVICE_DB_PASSWORD}
       - SPRING_APPLICATION_NAME=content-delivery-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
       - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
@@ -152,39 +172,27 @@ services:
   actuator:
     build: ./actuator
     ports:
-      - "8081:8081"
+      - "${ACTUATOR_PORT}:${ACTUATOR_PORT}"
     depends_on:
       - mysql
       - eureka-server
       - config-server
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/actuator_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-    networks:
-      - coursedb-net
-
-  payment-service:
-    build: ./payment
-    ports:
-      - "8086:8086"
-    depends_on:
-      - mysql
-      - eureka-server
-      - config-server
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
-      - RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
+      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${ACTUATOR_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${ACTUATOR_DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${ACTUATOR_DB_PASSWORD}
+      - SPRING_APPLICATION_NAME=actuator
+      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
       - coursedb-net
 
   api-gateway:
     build: ./api-gateway
     ports:
-      - "8765:8765"
+      - "${API_GATEWAY_PORT}:8765"
     depends_on:
       - user-management-service
       - course-management-service
@@ -193,8 +201,12 @@ services:
       - payment-service
       - content-delivery-service
       - actuator
-      - payment-service
       - eureka-server
+    environment:
+      - SPRING_APPLICATION_NAME=api-gateway
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
+      - EUREKA_CLIENT_FETCH_REGISTRY=true
     networks:
       - coursedb-net
 
