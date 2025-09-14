@@ -1,0 +1,33 @@
+# Default configuration for all services
+spring:
+  profiles:
+    active: default
+  cloud:
+    config:
+      fail-fast: false
+
+# Common database configuration
+database:
+  host: mysql
+  port: 3306
+  username: root
+  password: root
+
+# Common logging configuration
+logging:
+  level:
+    org.springframework: INFO
+    org.springframework.cloud: DEBUG
+    com.courseselling: DEBUG
+    com.example: DEBUG
+    com.courseplatform: DEBUG
+
+# Common actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,metrics,loggers,beans
+  endpoint:
+    health:
+      show-details: always
