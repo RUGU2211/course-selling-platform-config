@@ -70,4 +70,13 @@ public class PaymentController {
             return ResponseEntity.status(400).body(error);
         }
     }
+    @GetMapping("/{paymentId}")
+    public ResponseEntity<AppOrder> getPaymentById(@PathVariable Long paymentId) {
+        AppOrder order = paymentService.getOrderById(paymentId);
+        if (order != null) {
+            return ResponseEntity.ok(order);
+        } else {
+            return ResponseEntity.status(404).body(null);
+        }
+    }
 }
