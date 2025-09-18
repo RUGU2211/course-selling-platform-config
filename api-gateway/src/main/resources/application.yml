@@ -13,9 +13,11 @@ spring:
           predicates:
             - Path=/api/courses/**
         - id: enrollment-service
-          uri: lb://enrollment-service
+          uri: lb://enrollmentservice
           predicates:
-            - Path=/api/enrollments/**
+            - Path=/enrollment-service/**
+          filters:
+            - StripPrefix=1
         - id: payment-service
           uri: lb://payment-service
           predicates:
@@ -24,11 +26,16 @@ spring:
           uri: lb://notification-service
           predicates:
             - Path=/api/notifications/**
-eureka:
-  client:
-    service-url:
-      defaultZone: http://course-selling-platf-eureka-server-1:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
+  eureka:
+    client:
+      service-url:
+        defaultZone: http://course-selling-platf-eureka-server-1:8761/eureka/
+      register-with-eureka: true
+      fetch-registry: true
 server:
   port: 8765
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.reactive: DEBUG
