@@ -42,6 +42,9 @@ public class PaymentService {
         this.paymentRepository = paymentRepository;
         this.razorpayClient = new RazorpayClient(keyId, secret);
     }
+    public AppOrder getOrderById(Long paymentId) {
+        return orderRepository.findById(paymentId).orElse(null);
+    }
 
     /** Step 1: Create Razorpay order and save in DB */
     @Transactional
