@@ -171,6 +171,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserProfile(id));
     }
 
+
     @PutMapping("/profile/{id}")
     @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> updateUserProfile(
