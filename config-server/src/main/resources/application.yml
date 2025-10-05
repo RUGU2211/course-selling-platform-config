@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          # Git repository URL for configuration properties
+          uri: https://github.com/RUGU2211/course-selling-platf
+          default-label: main
+          clone-on-start: true
+          fail-fast: false
+        native:
+          search-locations: classpath:/config
+          fail-fast: false
+
+server:
+  port: 8888
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://course-platform-eureka:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,metrics,loggers,beans,configprops
+  endpoint:
+    health:
+      show-details: always

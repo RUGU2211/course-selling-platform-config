@@ -5,15 +5,61 @@
 RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
 RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
 
-# Database Credentials (if needed for external connections)
-DB_USERNAME=root
-DB_PASSWORD=root
+# MySQL Configuration
+MYSQL_ROOT_PASSWORD=root
+MYSQL_HOST=course-selling-platf-mysql-1
+MYSQL_PORT=3306
+MYSQL_EXTERNAL_PORT=3307
+
+# Database Names
+USER_SERVICE_DB_NAME=users_db
+COURSE_SERVICE_DB_NAME=courses_db
+ENROLLMENT_SERVICE_DB_NAME=enrollment_db
+NOTIFICATION_SERVICE_DB_NAME=notification_db
+PAYMENT_SERVICE_DB_NAME=payment_db
+CONTENT_SERVICE_DB_NAME=content_db
+
+# Database Credentials for each service
+USER_SERVICE_DB_USERNAME=root
+USER_SERVICE_DB_PASSWORD=root
+COURSE_SERVICE_DB_USERNAME=root
+COURSE_SERVICE_DB_PASSWORD=root
+ENROLLMENT_SERVICE_DB_USERNAME=root
+ENROLLMENT_SERVICE_DB_PASSWORD=root
+NOTIFICATION_SERVICE_DB_USERNAME=root
+NOTIFICATION_SERVICE_DB_PASSWORD=root
+PAYMENT_SERVICE_DB_USERNAME=root
+PAYMENT_SERVICE_DB_PASSWORD=root
+CONTENT_SERVICE_DB_USERNAME=root
+CONTENT_SERVICE_DB_PASSWORD=root
+
+# Service Ports
+EUREKA_SERVER_PORT=8761
+CONFIG_SERVER_PORT=8888
+API_GATEWAY_PORT=8765
+USER_SERVICE_PORT=8082
+COURSE_SERVICE_PORT=8083
+ENROLLMENT_SERVICE_PORT=8084
+NOTIFICATION_SERVICE_PORT=8085
+PAYMENT_SERVICE_PORT=8086
+CONTENT_SERVICE_PORT=8087
+JENKINS_PORT=8080
+
+# Service URLs
+EUREKA_CLIENT_SERVICE_URL=http://course-selling-platf-eureka-server-1:8761/eureka/
+CONFIG_SERVER_URL=http://course-selling-platf-config-server-1:8888
+
+# Spring Profiles
+SPRING_PROFILES_ACTIVE=default
 
 # JWT Secrets (should be different for each service in production)
 JWT_SECRET=your-super-secure-jwt-secret-key-here-change-this-in-production
 
 # Instructions:
 # 1. For local development: Set these in your IDE environment variables
-# 2. For Docker: Add them to docker-compose.yml environment section
+# 2. For Docker: Add them to docker-compose.yml environment section or create a .env file
 # 3. For production: Use Docker secrets or cloud environment variables
 # 4. Never commit actual credentials to version control
+
+# Additional Configuration
+SPRING_CONFIG_IMPORT_URL=optional:configserver:http://course-selling-platf-config-server-1:8888

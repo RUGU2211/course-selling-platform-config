@@ -3,13 +3,14 @@ spring:
     name: enrollmentservice
   cloud:
     config:
-      uri: http://course-selling-platf-config-server-1:8888
+      uri: http://course-platform-config:8888
+
   profiles:
     active: default
 
 eureka:
   client:
     service-url:
-      defaultZone: http://course-selling-platf-eureka-server-1:8761/eureka/
+      defaultZone: http://course-platform-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true

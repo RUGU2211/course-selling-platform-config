@@ -2,7 +2,7 @@ spring:
   application:
     name: user-management-service
   datasource:
-    url: jdbc:mysql://course-selling-platf-mysql-1:3307/users_db
+    url: jdbc:mysql://course-platform-mysql:3307/users_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -17,6 +17,6 @@ server:
 eureka:
   client:
     service-url:
-      defaultZone: http://course-selling-platf-eureka-server-1:8761/eureka/
+      defaultZone: http://course-platform-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true

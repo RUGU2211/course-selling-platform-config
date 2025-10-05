@@ -34,12 +34,17 @@ public class SecurityConfig {
         // Public endpoints that don't require authentication
         String[] publicMatchers = new String[] {
                 "/api/users/register",
+                "/user-management-service/api/users/register",
                 "/api/users/login",
+                "/user-management-service/api/users/login",
                 "/api/users/health",
+                "/user-management-service/api/users/health",
                 "/api/users/validate-token",
+                "/user-management-service/api/users/validate-token",
                 "/h2-console/**",
                 "/actuator/**"
         };
+
 
         http
                 // disable CSRF for APIs (enable selectively for browser forms)

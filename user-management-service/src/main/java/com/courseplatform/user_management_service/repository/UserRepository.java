@@ -12,8 +12,12 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
+    
+    Optional<User> findByUsername(String username);
 
     boolean existsByEmail(String email);
+    
+    boolean existsByUsername(String username);
 
     // Find all active users
     @Query("SELECT u FROM User u WHERE u.isActive = true")
@@ -35,7 +39,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Long countActiveUsersByRole(@Param("role") UserRole role);
 
     // Case-insensitive name search
-    @Query("SELECT u FROM User u WHERE LOWER(u.fullName) LIKE LOWER(CONCAT('%', :name, '%')) AND u.isActive = true")
+    @Query("SELECT u FROM User u WHERE (LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))) AND u.isActive = true")
     List<User> findByFullNameContainingIgnoreCase(@Param("name") String name);
 
 }

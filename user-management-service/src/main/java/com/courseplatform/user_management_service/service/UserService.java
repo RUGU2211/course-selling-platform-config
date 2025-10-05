@@ -41,6 +41,10 @@ public class UserService {
             if (userRepository.existsByEmail(dto.getEmail())) {
                 throw new RuntimeException("User with email " + dto.getEmail() + " already exists");
             }
+            
+            if (userRepository.existsByUsername(dto.getUsername())) {
+                throw new RuntimeException("User with username " + dto.getUsername() + " already exists");
+            }
 
             // Validate role
             UserRole role;
@@ -52,9 +56,11 @@ public class UserService {
 
             // Create new user
             User user = new User();
+            user.setUsername(dto.getUsername().toLowerCase().trim());
             user.setEmail(dto.getEmail().toLowerCase().trim());
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
-            user.setFullName(dto.getFullName().trim());
+            user.setFirstName(dto.getFirstName().trim());
+            user.setLastName(dto.getLastName().trim());
             user.setPhone(dto.getPhone() != null ? dto.getPhone().trim() : null);
             user.setBio(dto.getBio() != null ? dto.getBio().trim() : null);
             user.setRole(role);
@@ -153,8 +159,26 @@ public class UserService {
 
             boolean updated = false;
 
+            if (updates.containsKey("firstName") && updates.get("firstName") != null) {
+                user.setFirstName(updates.get("firstName").toString().trim());
+                updated = true;
+            }
+
+            if (updates.containsKey("lastName") && updates.get("lastName") != null) {
+                user.setLastName(updates.get("lastName").toString().trim());
+                updated = true;
+            }
+
+            // Support legacy fullName field for backward compatibility
             if (updates.containsKey("fullName") && updates.get("fullName") != null) {
-                user.setFullName(updates.get("fullName").toString().trim());
+                String fullName = updates.get("fullName").toString().trim();
+                String[] nameParts = fullName.split(" ", 2);
+                user.setFirstName(nameParts[0]);
+                if (nameParts.length > 1) {
+                    user.setLastName(nameParts[1]);
+                } else {
+                    user.setLastName("");
+                }
                 updated = true;
             }
 
@@ -446,6 +470,7 @@ public class UserService {
     private UserResponseDto convertToUserResponseDto(User user) {
         UserResponseDto dto = new UserResponseDto();
         dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setFullName(user.getFullName());
         dto.setPhone(user.getPhone());

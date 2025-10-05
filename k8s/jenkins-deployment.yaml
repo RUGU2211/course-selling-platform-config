@@ -1,0 +1,508 @@
+# Jenkins Kubernetes Deployment for Course Selling Platform
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins
+  labels:
+    name: jenkins
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec", "pods/log", "persistentvolumeclaims", "services", "secrets", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins
+subjects:
+- kind: ServiceAccount
+  name: jenkins
+  namespace: jenkins
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-config
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+data:
+  JENKINS_OPTS: "--httpPort=8080"
+  JAVA_OPTS: "-Djenkins.install.runSetupWizard=false -Xmx2g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication"
+  CASC_JENKINS_CONFIG: "/var/jenkins_home/casc_configs/jenkins.yaml"
+  DOCKER_REGISTRY: "ghcr.io"
+  KUBERNETES_NAMESPACE: "course-platform"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins-secrets
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+type: Opaque
+stringData:
+  jenkins-admin-password: "admin123"  # Change this in production
+  github-username: ""  # Set your GitHub username
+  github-token: ""     # Set your GitHub token
+  sonar-token: ""      # Set your SonarQube token
+  snyk-token: ""       # Set your Snyk token
+  slack-token: ""      # Set your Slack token
+  slack-team-domain: "" # Set your Slack team domain
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-pvc
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard  # Adjust based on your cluster
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+    app.kubernetes.io/version: "2.426.1"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jenkins
+      app.kubernetes.io/component: ci-cd
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jenkins
+        app.kubernetes.io/component: ci-cd
+        app.kubernetes.io/version: "2.426.1"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/prometheus"
+    spec:
+      serviceAccountName: jenkins
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: volume-permissions
+        image: busybox:1.36
+        command: ['sh', '-c', 'chown -R 1000:1000 /var/jenkins_home']
+        volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: jenkins
+        image: ghcr.io/your-org/jenkins:latest  # Use your custom Jenkins image
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: jnlp
+          containerPort: 50000
+          protocol: TCP
+        env:
+        - name: JENKINS_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: jenkins-admin-password
+        - name: GITHUB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: github-username
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: github-token
+        - name: SONAR_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: sonar-token
+        - name: SNYK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: snyk-token
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: slack-token
+        - name: SLACK_TEAM_DOMAIN
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-secrets
+              key: slack-team-domain
+        - name: JENKINS_URL
+          value: "http://jenkins.jenkins.svc.cluster.local:8080"
+        - name: JENKINS_ADMIN_EMAIL
+          value: "admin@course-platform.com"
+        - name: SONAR_HOST_URL
+          value: "http://sonarqube.jenkins.svc.cluster.local:9000"
+        envFrom:
+        - configMapRef:
+            name: jenkins-config
+        volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+        - name: jenkins-casc-config
+          mountPath: /var/jenkins_home/casc_configs
+          readOnly: true
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /login
+            port: http
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /login
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+      volumes:
+      - name: jenkins-home
+        persistentVolumeClaim:
+          claimName: jenkins-pvc
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+      - name: jenkins-casc-config
+        configMap:
+          name: jenkins-casc-config
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-casc-config
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+data:
+  jenkins.yaml: |
+    jenkins:
+      systemMessage: "Jenkins for Course Selling Platform - Kubernetes Deployment"
+      numExecutors: 2
+      mode: NORMAL
+      scmCheckoutRetryCount: 3
+      
+      securityRealm:
+        local:
+          allowsSignup: false
+          users:
+            - id: "admin"
+              password: "${JENKINS_ADMIN_PASSWORD}"
+              properties:
+                - "hudson.model.MyViewsProperty"
+                - "hudson.search.UserSearchProperty"
+                - "jenkins.security.ApiTokenProperty"
+                - "hudson.security.HudsonPrivateSecurityRealm$Details"
+
+      authorizationStrategy:
+        roleBased:
+          roles:
+            global:
+              - name: "admin"
+                description: "Jenkins administrators"
+                permissions:
+                  - "Overall/Administer"
+                assignments:
+                  - "admin"
+              - name: "developer"
+                description: "Developers with build permissions"
+                permissions:
+                  - "Overall/Read"
+                  - "Job/Build"
+                  - "Job/Cancel"
+                  - "Job/Read"
+                  - "Job/Workspace"
+                  - "View/Read"
+                assignments:
+                  - "authenticated"
+
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            serverUrl: "https://kubernetes.default.svc.cluster.local"
+            namespace: "jenkins"
+            jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+            jenkinsTunnel: "jenkins.jenkins.svc.cluster.local:50000"
+            connectTimeout: 5
+            readTimeout: 15
+            retentionTimeout: 5
+            maxRequestsPerHost: 32
+            templates:
+              - name: "jenkins-agent"
+                namespace: "jenkins"
+                label: "jenkins-agent"
+                nodeUsageMode: NORMAL
+                containers:
+                  - name: "jnlp"
+                    image: "jenkins/inbound-agent:latest"
+                    workingDir: "/home/jenkins/agent"
+                    command: ""
+                    args: ""
+                    ttyEnabled: true
+                    resourceRequestCpu: "100m"
+                    resourceRequestMemory: "256Mi"
+                    resourceLimitCpu: "500m"
+                    resourceLimitMemory: "512Mi"
+                  - name: "docker"
+                    image: "docker:dind"
+                    workingDir: "/home/jenkins/agent"
+                    command: "dockerd-entrypoint.sh"
+                    args: ""
+                    ttyEnabled: true
+                    privileged: true
+                    resourceRequestCpu: "100m"
+                    resourceRequestMemory: "256Mi"
+                    resourceLimitCpu: "1000m"
+                    resourceLimitMemory: "1Gi"
+                    envVars:
+                      - envVar:
+                          key: "DOCKER_TLS_CERTDIR"
+                          value: ""
+                volumes:
+                  - emptyDirVolume:
+                      mountPath: "/var/lib/docker"
+                      memory: false
+                serviceAccount: "jenkins"
+                idleMinutes: 5
+                activeDeadlineSeconds: 120
+                slaveConnectTimeout: 100
+
+    credentials:
+      system:
+        domainCredentials:
+          - credentials:
+              - usernamePassword:
+                  scope: GLOBAL
+                  id: "github-credentials"
+                  username: "${GITHUB_USERNAME}"
+                  password: "${GITHUB_TOKEN}"
+                  description: "GitHub credentials for repository access"
+              - string:
+                  scope: GLOBAL
+                  id: "sonar-token"
+                  secret: "${SONAR_TOKEN}"
+                  description: "SonarQube authentication token"
+              - string:
+                  scope: GLOBAL
+                  id: "snyk-token"
+                  secret: "${SNYK_TOKEN}"
+                  description: "Snyk security scanning token"
+              - string:
+                  scope: GLOBAL
+                  id: "slack-token"
+                  secret: "${SLACK_TOKEN}"
+                  description: "Slack notification token"
+
+    unclassified:
+      location:
+        url: "${JENKINS_URL}"
+        adminAddress: "${JENKINS_ADMIN_EMAIL}"
+
+      sonarGlobalConfiguration:
+        installations:
+          - name: "SonarQube"
+            serverUrl: "${SONAR_HOST_URL}"
+            credentialsId: "sonar-token"
+
+      slackNotifier:
+        teamDomain: "${SLACK_TEAM_DOMAIN}"
+        token: "${SLACK_TOKEN}"
+        room: "#ci-cd"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/prometheus"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+  - name: jnlp
+    port: 50000
+    targetPort: jnlp
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jenkins-ingress
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - jenkins.course-platform.local
+    secretName: jenkins-tls
+  rules:
+  - host: jenkins.course-platform.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jenkins
+            port:
+              number: 8080
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jenkins-hpa
+  namespace: jenkins
+  labels:
+    app.kubernetes.io/name: jenkins
+    app.kubernetes.io/component: ci-cd
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jenkins
+  minReplicas: 1
+  maxReplicas: 1  # Jenkins master should not be scaled horizontally
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

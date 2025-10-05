@@ -1,5 +1,6 @@
 # Use OpenJDK base image
 FROM openjdk:21-jdk
+RUN microdnf update -y && microdnf install -y curl && microdnf clean all
 WORKDIR /app
 # Copy built jar from target (ensure you build with mvn package first)
 COPY target/*.jar app.jar

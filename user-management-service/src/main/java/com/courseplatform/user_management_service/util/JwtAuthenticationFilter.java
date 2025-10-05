@@ -50,22 +50,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String role = jwtUtil.getRoleFromToken(jwt);
                 Long userId = jwtUtil.getUserIdFromToken(jwt);
 
-                // Create authentication token with user details
+                // Create authentication token with user details and authorities
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         email,
                         null,
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + (role == null ? "USER" : role)))
                 );
 
-                // Set additional details
+                // Set additional details for the authentication token
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // Add custom attributes for easy access in controllers
+                // Attach custom user attributes to the request
                 request.setAttribute("userId", userId);
                 request.setAttribute("userEmail", email);
                 request.setAttribute("userRole", role);
 
-                // Set authentication in security context
+                // Set the authentication into SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
                 logger.debug("JWT Token validated successfully for user: {} with role: {}", email, role);
@@ -74,21 +74,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // Continue with the filter chain
+        // Proceed with the next filter in the chain
         filterChain.doFilter(request, response);
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+        
+        logger.debug("JWT Filter - Request URI: {}", path);
 
-        // Skip JWT filtering for public endpoints
-        return path.startsWith("/api/users/register") ||
+        // Exclude certain paths from JWT filtering
+        boolean shouldSkip = path.startsWith("/api/users/register") ||
                 path.startsWith("/api/users/login") ||
                 path.startsWith("/api/users/health") ||
                 path.startsWith("/api/users/validate-token") ||
                 path.startsWith("/actuator/") ||
                 path.startsWith("/h2-console/") ||
                 path.equals("/error");
+                
+        logger.debug("JWT Filter - Should skip filtering for path {}: {}", path, shouldSkip);
+        return shouldSkip;
     }
 }

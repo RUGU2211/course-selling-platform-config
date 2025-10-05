@@ -15,6 +15,10 @@ public class User {
     private Long id;
 
     @Column(unique = true, nullable = false)
+    @NotBlank(message = "Username is required")
+    private String username;
+
+    @Column(unique = true, nullable = false)
     @Email(message = "Please provide a valid email")
     @NotBlank(message = "Email is required")
     private String email;
@@ -24,9 +28,13 @@ public class User {
     @Size(min = 6, message = "Password must be at least of 6 characters")
     private String password;
 
-    @Column(name = "full_name", nullable = false)
-    @NotBlank(message = "Full name is required")
-    private String fullName;
+    @Column(name = "first_name", nullable = false)
+    @NotBlank(message = "First name is required")
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    @NotBlank(message = "Last name is required")
+    private String lastName;
 
     @Column
     private String phone;
@@ -58,11 +66,13 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public User(String email, String password, String fullName, UserRole role) {
+    public User(String username, String email, String password, String firstName, String lastName, UserRole role) {
         this();
+        this.username = username;
         this.email = email;
         this.password = password;
-        this.fullName = fullName;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.role = role;
     }
 
@@ -90,12 +100,33 @@ public class User {
         this.password = password;
     }
 
-    public String getFullName() {
-        return fullName;
+    public String getUsername() {
+        return username;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    // Convenience method to get full name
+    public String getFullName() {
+        return firstName + " " + lastName;
     }
 
     public String getPhone() {

@@ -3,39 +3,72 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:5173"
+              - "http://localhost:5174"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
       routes:
         - id: user-management-service
           uri: lb://user-management-service
           predicates:
             - Path=/api/users/**
+
         - id: course-management-service
           uri: lb://course-management-service
           predicates:
             - Path=/api/courses/**
+
         - id: enrollment-service
           uri: lb://enrollmentservice
           predicates:
-            - Path=/enrollment-service/**
+            - Path=/api/enrollments/**
           filters:
-            - StripPrefix=1
+            - RewritePath=/api/enrollments/(.*),/enrollment-service/api/enrollments/$1
+
         - id: payment-service
           uri: lb://payment-service
           predicates:
             - Path=/api/payments/**
+
         - id: notification-service
           uri: lb://notification-service
           predicates:
             - Path=/api/notifications/**
-  eureka:
-    client:
-      service-url:
-        defaultZone: http://course-selling-platf-eureka-server-1:8761/eureka/
-      register-with-eureka: true
-      fetch-registry: true
+
+        - id: content-delivery-service
+          uri: lb://content-delivery-service
+          predicates:
+            - Path=/api/content/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://course-platform-eureka:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
 server:
   port: 8765
 
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.web.reactive: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,metrics,gateway
+  endpoint:
+    health:
+      show-details: always

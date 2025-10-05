@@ -38,4 +38,28 @@ public class NotificationController {
                 .map(n -> ResponseEntity.ok().<Void>build())
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    // Get unread notification count for a user
+    @GetMapping("/unread-count")
+    public ResponseEntity<UnreadCountResponse> getUnreadCount(@RequestParam(defaultValue = "1") Long userId) {
+        Long count = service.getUnreadCount(userId);
+        return ResponseEntity.ok(new UnreadCountResponse(count));
+    }
+
+    // Response DTO for unread count
+    public static class UnreadCountResponse {
+        private Long count;
+
+        public UnreadCountResponse(Long count) {
+            this.count = count;
+        }
+
+        public Long getCount() {
+            return count;
+        }
+
+        public void setCount(Long count) {
+            this.count = count;
+        }
+    }
 }

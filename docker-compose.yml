@@ -1,218 +1,372 @@
 version: '3.8'
 
 services:
+  # MySQL Database
   mysql:
-    image: mysql:8
+    image: mysql:8.0
+    container_name: course-platform-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${USER_SERVICE_DB_NAME}
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: course_platform
     ports:
-      - "${MYSQL_EXTERNAL_PORT}:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - coursedb-net
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  jenkins:
-    image: jenkins/jenkins:lts
-    ports:
-      - "${JENKINS_PORT}:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins-data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - coursedb-net
-
+  # Service Discovery
   eureka-server:
     build: ./eureka-server
+    container_name: course-platform-eureka
     ports:
-      - "${EUREKA_SERVER_PORT}:8761"
+      - "8761:8761"
     networks:
-      - coursedb-net
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
 
+  # Configuration Server
   config-server:
     build: ./config-server
+    container_name: course-platform-config
     ports:
-      - "${CONFIG_SERVER_PORT}:8888"
+      - "8888:8888"
     depends_on:
-      - eureka-server
+      eureka-server:
+        condition: service_healthy
     networks:
-      - coursedb-net
+      - microservices-network
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=false
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,env,metrics,loggers,beans,gateway
+      - MANAGEMENT_ENDPOINT_GATEWAY_ENABLED=true
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
-  user-management-service:
+  # User Management Service
+  user-service:
     build: ./user-management-service
+    container_name: course-platform-user-service
     ports:
-      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+      - "8082:8082"
     depends_on:
-      - mysql
-      - eureka-server
-      - config-server
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${USER_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${USER_SERVICE_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${USER_SERVICE_DB_PASSWORD}
-      - SPRING_APPLICATION_NAME=user-management-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     networks:
-      - coursedb-net
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/users_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
-  course-management-service:
+  # Course Management Service
+  course-service:
     build: ./course-management-service
+    container_name: course-platform-course-service
     ports:
-      - "${COURSE_SERVICE_PORT}:${COURSE_SERVICE_PORT}"
+      - "8083:8083"
     depends_on:
-      - mysql
-      - eureka-server
-      - config-server
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - microservices-network
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${COURSE_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${COURSE_SERVICE_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${COURSE_SERVICE_DB_PASSWORD}
+      - SPRING_PROFILES_ACTIVE=docker
       - SPRING_APPLICATION_NAME=course-management-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
-    networks:
-      - coursedb-net
+      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/courses_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
-  enrollmentservice:
+  # Enrollment Service
+  enrollment-service:
     build: ./enrollmentservice
+    container_name: course-platform-enrollment-service
     ports:
-      - "${ENROLLMENT_SERVICE_PORT}:${ENROLLMENT_SERVICE_PORT}"
+      - "8084:8084"
     depends_on:
-      - mysql
-      - eureka-server
-      - config-server
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${ENROLLMENT_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${ENROLLMENT_SERVICE_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${ENROLLMENT_SERVICE_DB_PASSWORD}
-      - SPRING_APPLICATION_NAME=enrollmentservice
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     networks:
-      - coursedb-net
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/enrollment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/enrollment-service/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
+  # Notification Service
   notification-service:
     build: ./notification-service
+    container_name: course-platform-notification-service
     ports:
-      - "${NOTIFICATION_SERVICE_PORT}:${NOTIFICATION_SERVICE_PORT}"
+      - "8085:8085"
     depends_on:
-      - mysql
-      - eureka-server
-      - config-server
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${NOTIFICATION_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${NOTIFICATION_SERVICE_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${NOTIFICATION_SERVICE_DB_PASSWORD}
-      - SPRING_APPLICATION_NAME=notification-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     networks:
-      - coursedb-net
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/notification_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
+  # Payment Service
   payment-service:
     build: ./payment
+    container_name: course-platform-payment-service
     ports:
-      - "${PAYMENT_SERVICE_PORT}:${PAYMENT_SERVICE_PORT}"
+      - "8086:8086"
     depends_on:
-      - mysql
-      - eureka-server
-      - config-server
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${PAYMENT_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${PAYMENT_SERVICE_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${PAYMENT_SERVICE_DB_PASSWORD}
-      - SPRING_APPLICATION_NAME=payment-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
-      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
-      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     networks:
-      - coursedb-net
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+      - RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
+      - RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
-  content-delivery-service:
+  # Content Delivery Service
+  content-service:
     build: ./content-delivery-service
+    container_name: course-platform-content-service
     ports:
-      - "${CONTENT_SERVICE_PORT}:${CONTENT_SERVICE_PORT}"
+      - "8087:8087"
     depends_on:
-      - mysql
-      - eureka-server
-      - config-server
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${CONTENT_SERVICE_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${CONTENT_SERVICE_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${CONTENT_SERVICE_DB_PASSWORD}
-      - SPRING_APPLICATION_NAME=content-delivery-service
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     networks:
-      - coursedb-net
-
-  actuator:
-    build: ./actuator
-    ports:
-      - "${ACTUATOR_PORT}:${ACTUATOR_PORT}"
-    depends_on:
-      - mysql
-      - eureka-server
-      - config-server
+      - microservices-network
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${ACTUATOR_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=${ACTUATOR_DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${ACTUATOR_DB_PASSWORD}
-      - SPRING_APPLICATION_NAME=actuator
-      - SPRING_CONFIG_IMPORT=optional:configserver:${CONFIG_SERVER_URL}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
-    networks:
-      - coursedb-net
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/content_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
+  # API Gateway
   api-gateway:
     build: ./api-gateway
+    container_name: course-platform-api-gateway
     ports:
-      - "${API_GATEWAY_PORT}:8765"
+      - "8765:8765"
     depends_on:
-      - user-management-service
-      - course-management-service
-      - enrollmentservice
+      user-service:
+        condition: service_healthy
+      course-service:
+        condition: service_healthy
+      enrollment-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      content-service:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: course-platform-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - microservices-network
+    depends_on:
+      - user-service
+      - course-service
+      - enrollment-service
       - notification-service
       - payment-service
-      - content-delivery-service
-      - actuator
+      - content-service
+      - api-gateway
       - eureka-server
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: course-platform-grafana
+    ports:
+      - "3000:3000"
     environment:
-      - SPRING_APPLICATION_NAME=api-gateway
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICE_URL}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=true
-      - EUREKA_CLIENT_FETCH_REGISTRY=true
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards
     networks:
-      - coursedb-net
+      - microservices-network
+    depends_on:
+      - prometheus
+
+  # Jenkins CI/CD
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: course-platform-jenkins
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - microservices-network
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+
+  # Redis for Caching
+  redis:
+    image: redis:7-alpine
+    container_name: course-platform-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-network
+    volumes:
+      - redis-data:/data
+
+  # RabbitMQ for Messaging
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: course-platform-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+    networks:
+      - microservices-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
 
 volumes:
   mysql-data:
+  prometheus-data:
+  grafana-data:
   jenkins-data:
+  redis-data:
+  rabbitmq-data:
 
 networks:
-  coursedb-net:
+  microservices-network:
+    driver: bridge

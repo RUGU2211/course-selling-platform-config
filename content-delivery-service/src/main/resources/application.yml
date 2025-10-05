@@ -5,9 +5,10 @@ spring:
   application:
     name: content-delivery-service
   config:
-    import: optional:configserver:http://config-server:8888
+    import: optional:configserver:http://course-platform-config:8888
+
   datasource:
-    url: jdbc:mysql://mysql:3306/content_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://course-platform-mysql:3307/content_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -23,7 +24,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka/
+      defaultZone: http://course-platform-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
 

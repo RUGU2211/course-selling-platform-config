@@ -1,0 +1,144 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: course-platform-ingress
+  namespace: course-platform
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+spec:
+  rules:
+  - host: course-platform.local
+    http:
+      paths:
+      # Frontend Application
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+      
+      # API Gateway - All microservice APIs
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway-service
+            port:
+              number: 8765
+      
+      # Direct service access (for development/debugging)
+      - path: /user-service
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 8082
+      
+      - path: /course-service
+        pathType: Prefix
+        backend:
+          service:
+            name: course-service
+            port:
+              number: 8083
+      
+      - path: /enrollment-service
+        pathType: Prefix
+        backend:
+          service:
+            name: enrollment-service
+            port:
+              number: 8084
+      
+      - path: /notification-service
+        pathType: Prefix
+        backend:
+          service:
+            name: notification-service
+            port:
+              number: 8085
+      
+      - path: /payment-service
+        pathType: Prefix
+        backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+      
+      - path: /content-service
+        pathType: Prefix
+        backend:
+          service:
+            name: content-service
+            port:
+              number: 8087
+      
+      # Monitoring and Management
+      - path: /eureka
+        pathType: Prefix
+        backend:
+          service:
+            name: eureka-service
+            port:
+              number: 8761
+      
+      - path: /prometheus
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus-service
+            port:
+              number: 9090
+      
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana-service
+            port:
+              number: 3000
+---
+# LoadBalancer service for external access (alternative to Ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-loadbalancer
+  namespace: course-platform
+  labels:
+    app: api-gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: api-gateway
+  ports:
+  - port: 80
+    targetPort: 8765
+    protocol: TCP
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-loadbalancer
+  namespace: course-platform
+  labels:
+    app: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http

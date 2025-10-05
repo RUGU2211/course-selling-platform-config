@@ -32,4 +32,8 @@ public class NotificationService {
         });
         return notification;
     }
+
+    public Long getUnreadCount(Long userId) {
+        return repository.countByUserIdAndReadFalse(userId);
+    }
 }

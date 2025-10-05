@@ -1,0 +1,220 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: course-platform
+type: Opaque
+data:
+  # Base64 encoded values
+  # root password: courseplatform123
+  mysql-root-password: Y291cnNlcGxhdGZvcm0xMjM=
+  # user password: courseplatform123
+  mysql-password: Y291cnNlcGxhdGZvcm0xMjM=
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: course-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  namespace: course-platform
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: "course_platform"
+        - name: MYSQL_USER
+          value: "courseuser"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+        - name: mysql-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      - name: mysql-init
+        configMap:
+          name: mysql-init-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: course-platform
+  labels:
+    app: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-config
+  namespace: course-platform
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS course_platform;
+    USE course_platform;
+    
+    -- Users table
+    CREATE TABLE IF NOT EXISTS users (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        first_name VARCHAR(50) NOT NULL,
+        last_name VARCHAR(50) NOT NULL,
+        phone VARCHAR(20),
+        bio TEXT,
+        profile_image VARCHAR(255),
+        role ENUM('STUDENT', 'INSTRUCTOR', 'ADMIN') DEFAULT 'STUDENT',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE
+    );
+    
+    -- Courses table
+    CREATE TABLE IF NOT EXISTS courses (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        instructor_id BIGINT NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        duration_hours INT,
+        level ENUM('BEGINNER', 'INTERMEDIATE', 'ADVANCED') DEFAULT 'BEGINNER',
+        category VARCHAR(100),
+        thumbnail_url VARCHAR(255),
+        is_published BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (instructor_id) REFERENCES users(id)
+    );
+    
+    -- Enrollments table
+    CREATE TABLE IF NOT EXISTS enrollments (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        student_id BIGINT NOT NULL,
+        course_id BIGINT NOT NULL,
+        enrollment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completion_date TIMESTAMP NULL,
+        progress DECIMAL(5,2) DEFAULT 0.00,
+        status ENUM('ACTIVE', 'COMPLETED', 'CANCELLED') DEFAULT 'ACTIVE',
+        FOREIGN KEY (student_id) REFERENCES users(id),
+        FOREIGN KEY (course_id) REFERENCES courses(id),
+        UNIQUE KEY unique_enrollment (student_id, course_id)
+    );
+    
+    -- Payments table
+    CREATE TABLE IF NOT EXISTS payments (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        enrollment_id BIGINT NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        payment_method VARCHAR(50),
+        transaction_id VARCHAR(255) UNIQUE,
+        status ENUM('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED') DEFAULT 'PENDING',
+        payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (enrollment_id) REFERENCES enrollments(id)
+    );
+    
+    -- Course content table
+    CREATE TABLE IF NOT EXISTS course_content (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        course_id BIGINT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        content_type ENUM('VIDEO', 'DOCUMENT', 'QUIZ', 'ASSIGNMENT') NOT NULL,
+        content_url VARCHAR(255),
+        duration_minutes INT,
+        order_index INT NOT NULL,
+        is_free BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (course_id) REFERENCES courses(id)
+    );
+    
+    -- Notifications table
+    CREATE TABLE IF NOT EXISTS notifications (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        user_id BIGINT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type ENUM('INFO', 'SUCCESS', 'WARNING', 'ERROR') DEFAULT 'INFO',
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    
+    -- Insert sample data
+    INSERT IGNORE INTO users (username, email, password, first_name, last_name, role) VALUES
+    ('admin', 'admin@courseplatform.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBaLyifVPoCBZy', 'Admin', 'User', 'ADMIN'),
+    ('instructor1', 'instructor@courseplatform.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBaLyifVPoCBZy', 'John', 'Instructor', 'INSTRUCTOR'),
+    ('student1', 'student@courseplatform.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBaLyifVPoCBZy', 'Jane', 'Student', 'STUDENT');
+    
+    GRANT ALL PRIVILEGES ON course_platform.* TO 'courseuser'@'%';
+    FLUSH PRIVILEGES;

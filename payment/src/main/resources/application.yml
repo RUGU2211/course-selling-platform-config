@@ -5,7 +5,7 @@ spring:
   application:
     name: payment-service
   datasource:
-    url: jdbc:mysql://mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://course-platform-mysql:3307/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,14 +19,15 @@ spring:
     database-platform: org.hibernate.dialect.MySQL8Dialect
   cloud:
     config:
-      uri: http://config-server:8888
+      uri: http://course-platform-config:8888
+
   profiles:
     active: default
 
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka/
+      defaultZone: http://course-platform-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
 
