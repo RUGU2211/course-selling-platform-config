@@ -1,33 +1,24 @@
-# Default configuration for all services
+# Common configuration for all services
 spring:
-  profiles:
-    active: default
   cloud:
     config:
       fail-fast: false
+      retry:
+        initial-interval: 1000
+        max-attempts: 6
+        max-interval: 2000
+        multiplier: 1.1
 
-# Common database configuration
-database:
-  host: mysql
-  port: 3306
-  username: root
-  password: root
-
-# Common logging configuration
-logging:
-  level:
-    org.springframework: INFO
-    org.springframework.cloud: DEBUG
-    com.courseselling: DEBUG
-    com.example: DEBUG
-    com.courseplatform: DEBUG
-
-# Common actuator configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,metrics,loggers,beans
+        include: health,info,env,metrics
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    org.springframework.cloud: DEBUG
+    org.springframework.boot.actuate: INFO

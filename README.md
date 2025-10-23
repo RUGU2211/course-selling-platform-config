@@ -3,18 +3,17 @@
 This repository contains the centralized configuration files for the Course Selling Platform microservices architecture.
 
 ## Repository Structure
+├── application.yml # Common configuration for all services
+├── user-management-service.yml # User Management Service configuration
+├── course-management-service.yml # Course Management Service configuration
+├── payment-service.yml # Payment Service configuration
+├── enrollmentservice.yml # Enrollment Service configuration
+├── notification-service.yml # Notification Service configuration
+├── content-delivery-service.yml # Content Delivery Service configuration
+├── api-gateway.yml # API Gateway configuration
+├── eureka-server.yml # Eureka Server configuration
+└── README.md # This file
 
-```
-├── application.yml                    # Common configuration for all services
-├── user-management-service.yml       # User Management Service configuration
-├── course-management.yml             # Course Management Service configuration
-├── payment-application.yml           # Payment Service configuration
-├── enrollmentservice.yml             # Enrollment Service configuration
-├── notification-service.yml          # Notification Service configuration
-├── content-delivery-service.yml      # Content Delivery Service configuration
-├── api-gateway.yml                   # API Gateway configuration
-└── README.md                         # This file
-```
 
 ## Services Configuration
 
@@ -25,13 +24,13 @@ This repository contains the centralized configuration files for the Course Sell
 - **Features**: JWT authentication, user CRUD operations
 
 ### 2. Course Management Service
-- **File**: `course-management.yml`
+- **File**: `course-management-service.yml`
 - **Port**: 8083
 - **Database**: courses_db
 - **Features**: Course CRUD, JWT validation
 
 ### 3. Payment Service
-- **File**: `payment-application.yml`
+- **File**: `payment-service.yml`
 - **Port**: 8086
 - **Database**: payment_db
 - **Features**: Razorpay integration, payment processing
@@ -39,13 +38,13 @@ This repository contains the centralized configuration files for the Course Sell
 ### 4. Enrollment Service
 - **File**: `enrollmentservice.yml`
 - **Port**: 8084
-- **Database**: enrollments_db
+- **Database**: enrollment_db
 - **Features**: Course enrollment management
 
 ### 5. Notification Service
 - **File**: `notification-service.yml`
 - **Port**: 8085
-- **Database**: notifications_db
+- **Database**: notification_db
 - **Features**: User notifications, email services
 
 ### 6. Content Delivery Service
@@ -59,30 +58,28 @@ This repository contains the centralized configuration files for the Course Sell
 - **Port**: 8765
 - **Features**: Service discovery, routing, load balancing
 
+### 8. Eureka Server
+- **File**: `eureka-server.yml`
+- **Port**: 8761
+- **Features**: Service discovery and registration
+
 ## Configuration Server Integration
 
 These configuration files are used by the Spring Cloud Config Server to provide centralized configuration management for all microservices.
 
 ### Config Server URL
-```
 http://config-server:8888
-```
 
-### Accessing Service Configurations
-```
-# Get specific service configuration
+### Accessing Service ConfigurationsGet specific service configuration
 GET http://config-server:8888/{service-name}/{profile}
-
-# Examples:
+Examples:
 GET http://config-server:8888/user-management-service/default
-GET http://config-server:8888/payment-application/default
+GET http://config-server:8888/payment-service/default
 GET http://config-server:8888/api-gateway/default
-```
 
 ## Environment Variables
 
 For production deployment, the following environment variables should be set:
-
 - `DB_USERNAME`: Database username
 - `DB_PASSWORD`: Database password
 - `JWT_SECRET`: JWT signing secret
