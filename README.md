@@ -2,18 +2,6 @@
 
 This repository contains the centralized configuration files for the Course Selling Platform microservices architecture.
 
-## Repository Structure
-├── application.yml # Common configuration for all services
-├── user-management-service.yml # User Management Service configuration
-├── course-management-service.yml # Course Management Service configuration
-├── payment-service.yml # Payment Service configuration
-├── enrollmentservice.yml # Enrollment Service configuration
-├── notification-service.yml # Notification Service configuration
-├── content-delivery-service.yml # Content Delivery Service configuration
-├── api-gateway.yml # API Gateway configuration
-├── eureka-server.yml # Eureka Server configuration
-└── README.md # This file
-
 
 ## Services Configuration
 
