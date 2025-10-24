@@ -23,7 +23,7 @@ spring:
             allowCredentials: true
             maxAge: 3600
       default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+        - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_FIRST
       routes:
         - id: user-management-service
           uri: lb://user-management-service
@@ -40,9 +40,6 @@ spring:
           predicates:
             - Path=/course-management-service/api/reviews/**
 
-        - id: enrollment-service
-          uri: lb://enrollmentservice
-          predicates:
 
 
         - id: payment-service
