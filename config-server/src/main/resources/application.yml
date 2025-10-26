@@ -1,21 +1,20 @@
+server:
+  port: 8888
+
 spring:
   application:
     name: config-server
+  profiles:
+    active: git
   cloud:
     config:
       server:
         git:
-          # Git repository URL for configuration properties
-          uri: https://github.com/RUGU2211/course-selling-platf
-          default-label: main
+          uri: https://github.com/RUGU2211/course-selling-platform-config.git
+          search-paths: .
           clone-on-start: true
-          fail-fast: false
-        native:
-          search-locations: classpath:/config
-          fail-fast: false
-
-server:
-  port: 8888
+          force-pull: true
+          timeout: 10
 
 eureka:
   client:
@@ -28,7 +27,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,metrics,loggers,beans,configprops
+        include: health,info,env,metrics,configprops
   endpoint:
     health:
       show-details: always

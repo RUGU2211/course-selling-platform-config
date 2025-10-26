@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Transient;
 import java.math.BigDecimal;
 
 @Entity
@@ -25,6 +26,7 @@ public class Course {
     @Column(name = "instructor_id")
     private Long instructorId;
 
+    @Transient
     private Long categoryId;
 
     public Course() {

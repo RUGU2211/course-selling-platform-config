@@ -4,7 +4,6 @@ import com.courseselling.coursemanagement.model.Course;
 import com.courseselling.coursemanagement.service.CourseService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController

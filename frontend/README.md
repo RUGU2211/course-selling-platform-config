@@ -1,232 +1,251 @@
 # Course Selling Platform - Frontend
 
-A modern, responsive React application for the Course Selling Platform, built with TypeScript, Material-UI, and Vite.
+A modern React-based frontend application for the Course Selling Platform microservices architecture.
 
 ## 🚀 Features
 
-### Core Functionality
-- **User Authentication**: Login, registration, and role-based access control
-- **Course Management**: Browse, search, filter, and enroll in courses
-- **Interactive Learning**: Video player with progress tracking and note-taking
-- **Dashboard**: Personalized dashboards for students, instructors, and admins
-- **Payment Integration**: Secure payment processing for course enrollment
-- **Real-time Notifications**: Live updates and notifications
-
-### Technical Features
-- **Modern React**: Built with React 19 and TypeScript
-- **Material-UI**: Beautiful, responsive design with Material Design components
-- **State Management**: React Query for server state and Context API for client state
-- **Form Handling**: React Hook Form with Yup validation
-- **Routing**: React Router v7 with protected routes
-- **Animations**: Framer Motion for smooth animations
-- **API Integration**: Comprehensive API services with error handling
+- **Modern React Architecture**: Built with React 19, TypeScript, and Vite
+- **Material-UI Design System**: Beautiful, responsive UI components
+- **State Management**: React Query for server state, Context API for client state
+- **Authentication**: JWT-based authentication with role-based access control
+- **API Integration**: Comprehensive integration with all backend microservices
+- **Responsive Design**: Mobile-first, responsive design
+- **Docker Support**: Containerized with Nginx for production deployment
 
 ## 🛠️ Tech Stack
 
-- **Framework**: React 19 with TypeScript
-- **Build Tool**: Vite with Rolldown
-- **UI Library**: Material-UI (MUI) v7
-- **State Management**: React Query + Context API
-- **Form Management**: React Hook Form + Yup
-- **Routing**: React Router v7
-- **Animations**: Framer Motion
-- **HTTP Client**: Axios
-- **Notifications**: React Hot Toast
-- **Charts**: Recharts
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **Material-UI (MUI)** - Component library
+- **React Query** - Server state management
+- **React Router** - Client-side routing
+- **Axios** - HTTP client
+- **React Hook Form** - Form handling
+- **Yup** - Schema validation
+- **Framer Motion** - Animations
+- **Recharts** - Data visualization
 
 ## 📁 Project Structure
 
 ```
-src/
-├── components/          # Reusable UI components
-│   ├── auth/           # Authentication components
-│   └── layout/         # Layout components
-├── contexts/           # React contexts
-├── hooks/              # Custom React hooks
-├── pages/              # Page components
-│   ├── auth/          # Authentication pages
-│   ├── courses/       # Course-related pages
-│   └── dashboard/     # Dashboard pages
-├── services/          # API services
-├── types/             # TypeScript type definitions
-└── utils/             # Utility functions
+frontend/
+├── public/                 # Static assets
+├── src/
+│   ├── components/        # Reusable UI components
+│   │   ├── auth/         # Authentication components
+│   │   └── layout/       # Layout components
+│   ├── contexts/         # React contexts
+│   ├── hooks/            # Custom hooks
+│   ├── pages/            # Page components
+│   │   ├── auth/         # Authentication pages
+│   │   ├── courses/      # Course-related pages
+│   │   ├── dashboard/    # Dashboard pages
+│   │   └── ...
+│   ├── services/         # API services
+│   ├── types/            # TypeScript type definitions
+│   ├── utils/            # Utility functions
+│   └── App.tsx           # Main application component
+├── Dockerfile            # Docker configuration
+├── nginx.conf            # Nginx configuration
+└── package.json          # Dependencies and scripts
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18 or higher
+- Node.js 18+ 
 - npm or yarn
+- Docker (for containerized deployment)
 
-### Installation
+### Development Setup
 
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd course-selling-platf/frontend
-```
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-2. **Install dependencies**
-```bash
-npm install
-```
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-3. **Set up environment variables**
-```bash
-cp .env.example .env.local
-```
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
 
-Edit `.env.local`:
-```env
-VITE_API_URL=http://localhost:8765/api
-VITE_APP_NAME=Course Selling Platform
-VITE_APP_VERSION=1.0.0
-```
+4. **Open in browser:**
+   ```
+   http://localhost:5173
+   ```
 
-4. **Start development server**
-```bash
-npm run dev
-```
+### Production Build
 
-The application will be available at `http://localhost:5173`
+1. **Build the application:**
+   ```bash
+   npm run build
+   ```
 
-### Available Scripts
+2. **Preview production build:**
+   ```bash
+   npm run preview
+   ```
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+## 🐳 Docker Deployment
 
-## 🏗️ Architecture
+### Build and Run with Docker
 
-### Component Architecture
-- **Atomic Design**: Components organized by complexity (atoms, molecules, organisms)
-- **Container/Presentational**: Separation of logic and presentation
-- **Custom Hooks**: Reusable logic extracted into custom hooks
+1. **Build the Docker image:**
+   ```bash
+   docker build -t course-platform-frontend .
+   ```
 
-### State Management
-- **Server State**: React Query for API data fetching and caching
-- **Client State**: React Context for authentication and global UI state
-- **Form State**: React Hook Form for form management
+2. **Run the container:**
+   ```bash
+   docker run -p 3000:80 course-platform-frontend
+   ```
 
-### API Integration
-- **Service Layer**: Centralized API services with error handling
-- **Type Safety**: Full TypeScript integration with API responses
-- **Caching**: Intelligent caching with React Query
+### Using Docker Compose
 
-## 🎨 UI/UX Features
-
-### Design System
-- **Material Design**: Consistent design language
-- **Responsive**: Mobile-first responsive design
-- **Dark Mode**: Support for light/dark themes
-- **Accessibility**: WCAG 2.1 compliant
-
-### User Experience
-- **Loading States**: Skeleton loaders and progress indicators
-- **Error Handling**: User-friendly error messages
-- **Animations**: Smooth transitions and micro-interactions
-- **Performance**: Optimized bundle size and lazy loading
-
-## 🔐 Security
-
-- **Authentication**: JWT-based authentication
-- **Authorization**: Role-based access control
-- **Input Validation**: Client and server-side validation
-- **XSS Protection**: Sanitized user inputs
-- **CSRF Protection**: CSRF tokens for state-changing operations
-
-## 📱 Responsive Design
-
-The application is fully responsive and optimized for:
-- **Desktop**: Full-featured experience
-- **Tablet**: Adapted layouts and navigation
-- **Mobile**: Touch-optimized interface
-
-## 🧪 Testing
+The frontend is included in the main `docker-compose.yml` file:
 
 ```bash
-# Run unit tests
-npm run test
+# Start all services including frontend
+docker-compose up -d
 
-# Run tests with coverage
-npm run test:coverage
-
-# Run e2e tests
-npm run test:e2e
+# Start only frontend with dependencies
+docker-compose up -d frontend
 ```
-
-## 📦 Deployment
-
-### Docker Deployment
-
-```bash
-# Build Docker image
-docker build -t course-platform/frontend:latest .
-
-# Run container
-docker run -p 80:80 course-platform/frontend:latest
-```
-
-### Kubernetes Deployment
-
-```bash
-# Deploy to Kubernetes
-kubectl apply -f ../k8s/frontend-deployment.yaml
-```
-
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
 | Variable | Description | Default |
-|----------|-------------|---------||
-| `VITE_API_URL` | Backend API URL | `http://localhost:8765/api` |
+|----------|-------------|---------|
+| `VITE_API_URL` | Backend API URL | `http://localhost:8765` |
 | `VITE_APP_NAME` | Application name | `Course Selling Platform` |
-| `VITE_APP_VERSION` | Application version | `1.0.0` |
+| `VITE_ENABLE_DEBUG` | Enable debug mode | `false` |
+| `VITE_RAZORPAY_KEY_ID` | Razorpay key for payments | - |
 
-### Build Configuration
+### API Integration
 
-The application uses Vite with custom configuration for:
-- **Bundle optimization**: Code splitting and tree shaking
-- **Asset optimization**: Image compression and lazy loading
-- **Development**: Hot module replacement and fast refresh
+The frontend integrates with the following backend services:
+
+- **User Management Service** (`/user-management-service/api/users/`)
+- **Course Management Service** (`/course-management-service/api/courses/`)
+- **Enrollment Service** (`/enrollment-service/api/enrollments/`)
+- **Payment Service** (`/payment-service/api/payments/`)
+- **Notification Service** (`/notification-service/api/notifications/`)
+- **Content Delivery Service** (`/content-delivery-service/api/content/`)
+
+## 📱 Features Overview
+
+### Authentication & Authorization
+- User registration and login
+- JWT token management
+- Role-based access control (Student, Instructor, Admin)
+- Protected routes
+
+### Course Management
+- Browse and search courses
+- Course details and enrollment
+- Course content streaming
+- Course reviews and ratings
+
+### User Dashboard
+- Student dashboard with enrolled courses
+- Instructor dashboard for course management
+- Admin dashboard for platform management
+
+### Payment Integration
+- Razorpay payment gateway integration
+- Payment history and management
+- Refund processing
+
+### Notifications
+- Real-time notifications
+- Email notifications
+- In-app notification system
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests with UI
+npm run test:ui
+
+# Type checking
+npm run type-check
+```
+
+## 📦 Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+| `npm run type-check` | Run TypeScript type checking |
+| `npm test` | Run tests |
+
+## 🔒 Security
+
+- JWT token authentication
+- Secure HTTP headers via Nginx
+- CORS configuration
+- Input validation and sanitization
+- XSS protection
+
+## 🚀 Performance
+
+- Code splitting and lazy loading
+- Image optimization
+- Gzip compression
+- Browser caching
+- CDN-ready static assets
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **API Connection Issues:**
+   - Check `VITE_API_URL` environment variable
+   - Ensure backend services are running
+   - Check CORS configuration
+
+2. **Build Issues:**
+   - Clear node_modules and reinstall
+   - Check TypeScript errors
+   - Verify environment variables
+
+3. **Docker Issues:**
+   - Check Docker daemon is running
+   - Verify Dockerfile syntax
+   - Check port conflicts
+
+### Debug Mode
+
+Enable debug mode by setting `VITE_ENABLE_DEBUG=true` in your environment variables.
+
+## 📄 License
+
+This project is part of the Course Selling Platform microservices architecture.
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-### Development Guidelines
+## 📞 Support
 
-- Follow TypeScript best practices
-- Use Material-UI components consistently
-- Write comprehensive tests
-- Follow the established code style
-- Update documentation for new features
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: Check this README and [DEPLOYMENT.md](./DEPLOYMENT.md)
-- **Issues**: Create an issue in the GitHub repository
-- **Discussions**: Use GitHub Discussions for questions
-
-## 🗺️ Roadmap
-
-- [ ] Progressive Web App (PWA) support
-- [ ] Offline functionality
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support (i18n)
-- [ ] Advanced course creation tools
-- [ ] Live streaming integration
-- [ ] Mobile app development
+For support and questions, please contact the development team.

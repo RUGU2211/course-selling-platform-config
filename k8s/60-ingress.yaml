@@ -1,0 +1,147 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: course-platform-ingress
+  namespace: course-platform
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+      - path: /actuator
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+      - path: /course-management-service
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+      - path: /user-service
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+      - path: /notification-service
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+      - path: /payment-service
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+      - path: /content-service
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: course-platform-eureka-config
+  namespace: course-platform
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /eureka(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: eureka-server
+            port:
+              number: 8761
+      - path: /config(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: config-server
+            port:
+              number: 8888
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: course-platform-hosts
+  namespace: course-platform
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: frontend.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+  - host: api.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 8765
+  - host: eureka.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: eureka-server
+            port:
+              number: 8761
+  - host: config.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: config-server
+            port:
+              number: 8888

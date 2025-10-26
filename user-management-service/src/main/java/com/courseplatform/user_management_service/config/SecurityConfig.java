@@ -4,6 +4,7 @@ import com.courseplatform.user_management_service.util.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,18 +34,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         // Public endpoints that don't require authentication
         String[] publicMatchers = new String[] {
-                "/api/users/register",
-                "/user-management-service/api/users/register",
-                "/api/users/login",
-                "/user-management-service/api/users/login",
-                "/api/users/health",
-                "/user-management-service/api/users/health",
-                "/api/users/validate-token",
-                "/user-management-service/api/users/validate-token",
+                "/api/users/**",
+                "/user-management-service/api/users/**",
                 "/h2-console/**",
                 "/actuator/**"
         };
-
 
         http
                 // disable CSRF for APIs (enable selectively for browser forms)
@@ -62,8 +56,7 @@ public class SecurityConfig {
 
                 // configure URL authorization
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(publicMatchers).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
 
                 // allow frames for h2-console (only for dev)
@@ -80,7 +73,8 @@ public class SecurityConfig {
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // Explicitly use $2A version for compatibility with seeded hashes
+        return new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2A);
     }
 
     /**

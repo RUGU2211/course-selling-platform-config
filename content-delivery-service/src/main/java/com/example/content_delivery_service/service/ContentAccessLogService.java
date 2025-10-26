@@ -1,7 +1,9 @@
 package com.example.content_delivery_service.service;
 
 import com.example.content_delivery_service.entity.ContentAccessLog;
+import com.example.content_delivery_service.dto.ContentAccessLogDto;
 import com.example.content_delivery_service.repository.ContentAccessLogRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,22 +12,28 @@ import java.util.List;
 public class ContentAccessLogService {
 
     private final ContentAccessLogRepository logRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public ContentAccessLogService(ContentAccessLogRepository logRepository) {
+    public ContentAccessLogService(ContentAccessLogRepository logRepository, SimpMessagingTemplate messagingTemplate) {
         this.logRepository = logRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
-    // Save log
     public ContentAccessLog saveLog(ContentAccessLog log) {
-        return logRepository.save(log);
+        ContentAccessLog saved = logRepository.save(log);
+        try {
+            ContentAccessLogDto dto = ContentAccessLogDto.fromEntity(saved);
+            messagingTemplate.convertAndSend("/topic/content-logs", dto);
+        } catch (Exception ignored) {
+            // Avoid failing the save if broadcasting encounters any issues
+        }
+        return saved;
     }
 
-    // Get logs by user
     public List<ContentAccessLog> getLogsByUser(Long userId) {
         return logRepository.findByUserId(userId);
     }
 
-    // Get all logs
     public List<ContentAccessLog> getAllLogs() {
         return logRepository.findAll();
     }

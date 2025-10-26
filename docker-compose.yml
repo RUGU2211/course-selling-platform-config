@@ -51,17 +51,13 @@ services:
       - microservices-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
-      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=false
-      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,env,metrics,loggers,beans,gateway
-      - MANAGEMENT_ENDPOINT_GATEWAY_ENABLED=true
-      - SPRING_CLOUD_CONFIG_ENABLED=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
+
 
   # User Management Service
   user-service:
@@ -75,7 +71,7 @@ services:
       eureka-server:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -84,6 +80,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
       - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
@@ -104,7 +101,7 @@ services:
       eureka-server:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -134,7 +131,7 @@ services:
       eureka-server:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -163,7 +160,7 @@ services:
       eureka-server:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -192,7 +189,7 @@ services:
       eureka-server:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -223,7 +220,7 @@ services:
       eureka-server:
         condition: service_healthy
       config-server:
-        condition: service_healthy
+        condition: service_started
     networks:
       - microservices-network
     environment:
@@ -266,6 +263,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
+      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
+      - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID=true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8765/actuator/health"]
       interval: 30s
@@ -273,99 +273,64 @@ services:
       retries: 5
       start_period: 120s
 
+  # Frontend Application
+  frontend:
+    build: ./frontend
+    container_name: course-platform-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    environment:
+      - VITE_API_URL=http://localhost:8765
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   # Prometheus Monitoring
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: course-platform-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    networks:
-      - microservices-network
-    depends_on:
-      - user-service
-      - course-service
-      - enrollment-service
-      - notification-service
-      - payment-service
-      - content-service
-      - api-gateway
-      - eureka-server
+  # Note: For local development, Prometheus, Grafana, and Jenkins are disabled.
+  # Uncomment below if you need them locally.
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus-data:/prometheus
+  #   networks:
+  #     - microservices-network
+  #   depends_on:
+  #     - api-gateway
+  #
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - microservices-network
+  #   depends_on:
+  #     - prometheus
+  #
+  # jenkins:
+  #   image: jenkins/jenkins:lts
+  #   ports:
+  #     - "8081:8080"
+  #     - "50000:50000"
+  #   volumes:
+  #     - jenkins-data:/var/jenkins_home
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   networks:
+  #     - microservices-network
 
-  # Grafana Dashboards
-  grafana:
-    image: grafana/grafana:latest
-    container_name: course-platform-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
-      - GF_SECURITY_ADMIN_USER=admin
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./docker/grafana/provisioning:/etc/grafana/provisioning
-      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards
-    networks:
-      - microservices-network
-    depends_on:
-      - prometheus
-
-  # Jenkins CI/CD
-  jenkins:
-    image: jenkins/jenkins:lts
-    container_name: course-platform-jenkins
-    ports:
-      - "8081:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins-data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - microservices-network
-    environment:
-      - JENKINS_OPTS=--httpPort=8080
-
-  # Redis for Caching
-  redis:
-    image: redis:7-alpine
-    container_name: course-platform-redis
-    ports:
-      - "6379:6379"
-    networks:
-      - microservices-network
-    volumes:
-      - redis-data:/data
-
-  # RabbitMQ for Messaging
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: course-platform-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin123
-    networks:
-      - microservices-network
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
 
 volumes:
   mysql-data:
-  prometheus-data:
-  grafana-data:
-  jenkins-data:
-  redis-data:
-  rabbitmq-data:
 
 networks:
   microservices-network:

@@ -7,6 +7,7 @@ import com.example.payment.entity.AppOrder;
 import com.example.payment.entity.Payment;
 import com.example.payment.repository.OrderRepository;
 import com.example.payment.repository.PaymentRepository;
+import com.example.payment.client.NotificationServiceClient;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import org.json.JSONObject;
@@ -19,7 +20,9 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Formatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PaymentService {
@@ -27,6 +30,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final RazorpayClient razorpayClient;
+    private final NotificationServiceClient notificationClient;
 
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
@@ -37,10 +41,12 @@ public class PaymentService {
     public PaymentService(OrderRepository orderRepository,
                           PaymentRepository paymentRepository,
                           @Value("${razorpay.key.id}") String keyId,
-                          @Value("${razorpay.key.secret}") String secret) throws Exception {
+                          @Value("${razorpay.key.secret}") String secret,
+                          NotificationServiceClient notificationClient) throws Exception {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.razorpayClient = new RazorpayClient(keyId, secret);
+        this.notificationClient = notificationClient;
     }
     public AppOrder getOrderById(Long paymentId) {
         return orderRepository.findById(paymentId).orElse(null);
@@ -101,6 +107,18 @@ public class PaymentService {
         payment.setCreatedAt(LocalDateTime.now());
 
         paymentRepository.save(payment);
+
+        // Send notification on payment success
+        try {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("userId", order.getUserId());
+            notification.put("type", "PAYMENT");
+            notification.put("subject", "Payment successful");
+            notification.put("message", "Your payment for course ID " + order.getCourseId() + " was successful.");
+            notification.put("relatedEntityId", order.getId());
+            notification.put("relatedEntityType", "ORDER");
+            notificationClient.sendNotification(notification);
+        } catch (Exception ignored) {}
     }
 
     /** Step 3: Refund order (dummy implementation) */

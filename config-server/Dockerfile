@@ -1,8 +1,9 @@
-# Use OpenJDK base image
-FROM openjdk:21-jdk
+FROM openjdk:21-jdk-slim
+
 WORKDIR /app
-# Copy built jar from target (ensure you build with mvn package first)
-COPY target/*.jar app.jar
-# Expose correct port (see summary for each service)
+
+COPY target/config-server-0.0.1-SNAPSHOT.jar app.jar
+
 EXPOSE 8888
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

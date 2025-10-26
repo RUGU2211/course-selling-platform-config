@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -43,5 +44,16 @@ public class ReviewController {
     public ResponseEntity<?> deleteReview(@PathVariable Long id) {
         service.deleteReview(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Rating summaries
+    @GetMapping("/course/{courseId}/summary")
+    public Map<String, Object> getCourseSummary(@PathVariable Long courseId) {
+        return service.getCourseSummary(courseId);
+    }
+
+    @GetMapping("/summary")
+    public Map<String, Object> getGlobalSummary() {
+        return service.getGlobalSummary();
     }
 }

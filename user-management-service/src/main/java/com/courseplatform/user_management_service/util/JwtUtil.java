@@ -7,11 +7,13 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.function.Function;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtUtil {
 
-    private String SECRET_KEY = "your-secure-key";  // Ideally read from config-server in production
+    // Use a sufficiently long secret (>= 32 bytes for HS256)
+    private String SECRET_KEY = "your-secure-key-should-be-at-least-32-chars-long-2025-10-20";
 
     // Extract username (email) from token
     public String getEmailFromToken(String token) {
@@ -45,7 +47,7 @@ public class JwtUtil {
     // Parse all claims
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .setSigningKey(SECRET_KEY)
+                .setSigningKey(SECRET_KEY.getBytes(StandardCharsets.UTF_8))
                 .parseClaimsJws(token)
                 .getBody();
     }
@@ -63,7 +65,7 @@ public class JwtUtil {
                 .claim("role", role)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))  // 10 hours expiration
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY.getBytes(StandardCharsets.UTF_8))
                 .compact();
     }
 
