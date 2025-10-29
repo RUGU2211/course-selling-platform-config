@@ -66,13 +66,37 @@ export async function createCourse(course: Partial<BackendCourse>): Promise<Back
   });
 }
 
-// Ratings
+export async function updateCourse(id: number, course: Partial<BackendCourse>): Promise<BackendCourse> {
+  return apiFetch<BackendCourse>(`/course-management-service/api/courses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(course),
+  });
+}
+
+export async function deleteCourse(id: number): Promise<void> {
+  return apiFetch<void>(`/course-management-service/api/courses/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// Ratings & Reviews
 export async function fetchCourseRatingSummary(courseId: number): Promise<RatingSummary> {
   return apiFetch<RatingSummary>(`/course-management-service/api/reviews/course/${courseId}/summary`);
 }
 
 export async function fetchGlobalRatingSummary(): Promise<RatingSummary> {
   return apiFetch<RatingSummary>(`/course-management-service/api/reviews/summary`);
+}
+
+export async function fetchCourseReviews(courseId: number): Promise<any[]> {
+  return apiFetch<any[]>(`/course-management-service/api/reviews/course/${courseId}`);
+}
+
+export async function createReview(review: { courseId: number; userId: number; rating: number; comment?: string }): Promise<any> {
+  return apiFetch<any>(`/course-management-service/api/reviews`, {
+    method: 'POST',
+    body: JSON.stringify(review),
+  });
 }
 
 // Auth
@@ -114,10 +138,44 @@ export async function registerApi(payload: RegisterRequest): Promise<LoginRespon
   });
 }
 
+export async function getUserProfile(userId: number): Promise<any> {
+  return apiFetch<any>(`/user-management-service/api/users/profile/${userId}`);
+}
+
+// Enrollment
+export async function enrollInCourse(enrollment: { studentId: number; courseId: number }): Promise<any> {
+  return apiFetch<any>(`/enrollment-service/api/enrollments`, {
+    method: 'POST',
+    body: JSON.stringify(enrollment),
+  });
+}
+
+export async function getStudentEnrollments(studentId: number): Promise<any[]> {
+  return apiFetch<any[]>(`/enrollment-service/api/enrollments/student/${studentId}`);
+}
+
+export async function updateEnrollmentProgress(enrollmentId: number, progress: { progressPercentage: number; lastAccessedContentId: number }): Promise<any> {
+  return apiFetch<any>(`/enrollment-service/api/enrollments/${enrollmentId}/progress`, {
+    method: 'PUT',
+    body: JSON.stringify(progress),
+  });
+}
+
 // Payments
 export async function processPaymentWorkflow(userId: number, courseId: number, amount: number): Promise<any> {
   const params = new URLSearchParams({ userId: String(userId), courseId: String(courseId), amount: String(amount) });
   return apiFetch<any>(`/payment-service/api/payments/workflow/process?${params.toString()}`, { method: 'POST' });
+}
+
+export async function getPaymentHistory(userId: number): Promise<any[]> {
+  return apiFetch<any[]>(`/payment-service/api/payments/orders/${userId}`);
+}
+
+export async function createPaymentOrder(order: { userId: number; courseId: number; amount: number; paymentMethod: string }): Promise<any> {
+  return apiFetch<any>(`/payment-service/api/payments/process`, {
+    method: 'POST',
+    body: JSON.stringify(order),
+  });
 }
 
 // Content Service
@@ -146,5 +204,29 @@ export async function logContentAccess(userId: number, contentId: number, action
   await apiFetch<void>(`/content-delivery-service/api/logs`, {
     method: 'POST',
     body: JSON.stringify({ userId, content: { contentId }, action }),
+  });
+}
+
+// Notifications
+export async function sendNotification(notification: { userId: number; title: string; message: string; type?: string }): Promise<any> {
+  return apiFetch<any>(`/notification-service/api/notifications/send`, {
+    method: 'POST',
+    body: JSON.stringify(notification),
+  });
+}
+
+export async function getUserNotifications(userId: number): Promise<any[]> {
+  return apiFetch<any[]>(`/notification-service/api/notifications/user/${userId}`);
+}
+
+export async function markNotificationRead(notificationId: number): Promise<void> {
+  await apiFetch<void>(`/notification-service/api/notifications/${notificationId}/read`, {
+    method: 'PUT',
+  });
+}
+
+export async function deleteNotification(notificationId: number): Promise<void> {
+  await apiFetch<void>(`/notification-service/api/notifications/${notificationId}`, {
+    method: 'DELETE',
   });
 }

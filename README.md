@@ -18,29 +18,49 @@ This platform consists of the following microservices:
 
 ## Quick Start
 
+**📖 See [QUICK_START.md](QUICK_START.md) for detailed instructions!**
+
 ### Prerequisites
 - Docker and Docker Compose
-- Java 17+ (for local development)
-- Node.js 18+ (for frontend development)
+- Java 21 JDK (for local development)
+- Maven 3.9+ (for building services)
+- Node.js 20+ (for frontend development)
 
 ### Running the Platform
 
-#### Option 1: Using Docker Compose (Recommended)
-```bash
-# Start all services
-docker-compose up --build -d
+**⚠️ Important:** You need to build JAR files first before using Docker Compose, or use Docker Hub images.
 
-# Check service status
+#### Option 1: Build from Source (Development)
+```bash
+# 1. Build all services (requires Maven)
+.\build-all-services.ps1  # Windows
+
+# 2. Start all services
+docker-compose up -d
+
+# 3. Check service status
 docker-compose ps
 
-# View logs
+# 4. View logs
 docker-compose logs -f
 
-# Stop all services
+# 5. Stop all services
 docker-compose down
 ```
 
-#### Option 2: Using Startup Scripts
+#### Option 2: Using Docker Hub Images (Production)
+```bash
+# 1. Login to Docker Hub
+docker login
+
+# 2. Deploy production images
+docker-compose -f docker-compose.prod.yml up -d
+
+# Or use deployment script
+.\deploy-prod.bat  # Windows
+```
+
+#### Option 3: Using Startup Scripts
 - **Linux/Mac:** `./start-platform.sh`
 - **Windows:** `start-platform.bat`
 

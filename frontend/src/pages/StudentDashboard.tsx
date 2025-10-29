@@ -2,22 +2,70 @@ import React from 'react';
 import { Box, Typography, Container, Card, CardContent, Button, LinearProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getEnrollments, getCourseById } from '../services/staticData';
+import { getStudentEnrollments, fetchCourseById, getPaymentHistory } from '../services/api';
 
 const StudentDashboard: React.FC = () => {
-  // enrolledCourses is derived from static enrollments below
   const { user } = useAuth();
-  const enrolls = user ? getEnrollments(Number(user.id) || 0) : [];
-  const enrolledCourses = enrolls.map(e => {
-    const c = getCourseById(e.courseId);
-    return c ? { id: c.id, title: c.title, progress: 0, instructor: c.instructor } : null;
-  }).filter(Boolean) as { id: number; title: string; progress: number; instructor: string }[];
+  
+  const [enrollments, setEnrollments] = React.useState<any[]>([]);
+  const [courses, setCourses] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [totalSpent, setTotalSpent] = React.useState(0);
 
-  const recentActivity = [
-    { id: 1, action: 'Completed lesson', course: 'Introduction to React', time: '2 hours ago' },
-    { id: 2, action: 'Started new course', course: 'Advanced Spring Boot', time: '1 day ago' },
-    { id: 3, action: 'Earned certificate', course: 'Docker for Developers', time: '3 days ago' },
-  ];
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        // Fetch enrollments
+        const enrolls = await getStudentEnrollments(Number(user.id));
+        if (!mounted) return;
+        setEnrollments(enrolls);
+        
+        // Fetch course details for each enrollment
+        const coursePromises = enrolls.map((e: any) => 
+          fetchCourseById(e.courseId).catch(() => null)
+        );
+        const courseData = await Promise.all(coursePromises);
+        if (!mounted) return;
+        setCourses(courseData.filter(Boolean));
+        
+        // Calculate total spent
+        const payments = await getPaymentHistory(Number(user.id));
+        const spent = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        setTotalSpent(spent);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    
+    return () => { mounted = false; };
+  }, [user]);
+
+  const enrolledCourses = courses.map((course, index) => {
+    const enrollment = enrollments[index];
+    return {
+      id: course.id,
+      title: course.title,
+      progress: enrollment?.progress || 0,
+      completed: enrollment?.completed || false,
+      enrollmentDate: enrollment?.enrolledAt,
+    };
+  });
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography>Loading...</Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -38,9 +86,6 @@ const StudentDashboard: React.FC = () => {
                     <Typography variant="h6" gutterBottom>
                       {course.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      Instructor: {course.instructor}
-                    </Typography>
                     <Box sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2">Progress</Typography>
@@ -54,7 +99,7 @@ const StudentDashboard: React.FC = () => {
                       component={Link}
                       to={`/courses/${course.id}`}
                     >
-                      {course.progress === 100 ? 'View Certificate' : 'Continue Learning'}
+                      {course.completed ? 'View Certificate' : 'Continue Learning'}
                     </Button>
                   </Box>
                 ))
@@ -75,21 +120,32 @@ const StudentDashboard: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h5" component="h2" gutterBottom>
-                Recent Activity
+                Statistics
               </Typography>
-              {recentActivity.map((activity) => (
-                <Box key={activity.id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: '8px' }}>
-                  <Typography variant="body2" fontWeight="bold">
-                    {activity.action}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h4" color="primary.main" fontWeight="bold">
+                  {enrolledCourses.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Enrolled Courses
+              </Typography>
+              </Box>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h4" color="primary.main" fontWeight="bold">
+                  ${totalSpent.toFixed(2)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {activity.course}
+                  Total Spent
+                </Typography>
+              </Box>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h4" color="primary.main" fontWeight="bold">
+                  {enrolledCourses.filter(c => c.completed).length}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {activity.time}
+                <Typography variant="body2" color="text.secondary">
+                  Completed Courses
                   </Typography>
                 </Box>
-              ))}
             </CardContent>
           </Card>
         </Box>

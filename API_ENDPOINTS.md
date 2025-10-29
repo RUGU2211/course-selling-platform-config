@@ -1,5 +1,218 @@
 # Course Selling Platform - API Endpoints Documentation
 
+## Postman Testing Guide 🚀
+
+### Quick Setup for Postman Testing
+
+#### 1. Import Environment Variables
+Create a new environment in Postman with these variables:
+
+| Variable | Initial Value | Current Value |
+|----------|--------------|---------------|
+| `base_url` | http://localhost:8765 | http://localhost:8765 |
+| `gateway_url` | http://localhost:8765 | http://localhost:8765 |
+| `frontend_url` | http://localhost:3000 | http://localhost:3000 |
+| `token` | | *(leave empty, will be set after login)* |
+| `user_id` | | *(leave empty, will be set after login)* |
+
+#### 2. Authentication Flow
+
+**Step 1: Register a New User**
+```
+POST {{base_url}}/user-management-service/api/users/register
+```
+**Body (raw JSON):**
+```json
+{
+  "fullName": "Test User",
+  "email": "test@example.com",
+  "password": "Password123!",
+  "role": "STUDENT"
+}
+```
+**Save Response:** Copy the `token` from response → Set in environment variable `token`
+
+**Step 2: Login**
+```
+POST {{base_url}}/user-management-service/api/users/login
+```
+**Body (raw JSON):**
+```json
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
+```
+**Save Response:** Copy the `token` → Update environment variable `token`
+
+#### 3. Setting Up Authorization Header
+
+Create a Pre-request Script in Postman:
+```javascript
+// This automatically adds the Authorization header if token exists
+if (pm.environment.get("token")) {
+    pm.request.headers.add({
+        key: 'Authorization',
+        value: 'Bearer ' + pm.environment.get("token")
+    });
+}
+```
+
+#### 4. Creating a Collection
+
+Organize your requests into these folders:
+
+```
+Course Platform APIs
+├── Authentication
+│   ├── Register User
+│   └── Login User
+├── User Management
+│   ├── Get Profile
+│   ├── Update Profile
+│   └── Get Dashboard
+├── Course Management
+│   ├── Get All Courses
+│   ├── Get Course by ID
+│   ├── Create Course (Requires Login)
+│   ├── Update Course (Requires Login)
+│   └── Delete Course (Requires Login)
+├── Enrollment
+│   ├── Enroll in Course (Requires Login)
+│   ├── Get My Enrollments (Requires Login)
+│   └── Update Progress (Requires Login)
+├── Payment
+│   ├── Process Payment (Requires Login)
+│   └── Get Payment History (Requires Login)
+├── Notifications
+│   ├── Send Notification (Requires Login)
+│   ├── Get My Notifications (Requires Login)
+│   └── Mark as Read (Requires Login)
+└── Content
+    ├── Get Course Content
+    ├── Upload Content (Requires Login)
+    └── Stream Content
+```
+
+### Testing Workflow
+
+#### Complete User Journey Test
+
+1. **Register** → Get JWT token
+2. **Login** → Verify token works
+3. **View Courses** → Browse available courses
+4. **Enroll in Course** → Enroll in a free course
+5. **Process Payment** → Pay for a paid course
+6. **View Enrollments** → Check enrolled courses
+7. **Update Progress** → Track learning progress
+8. **View Notifications** → Check for updates
+
+### Sample Postman Collection JSON
+
+```json
+{
+  "info": {
+    "name": "Course Selling Platform API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8765",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"STUDENT\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/user-management-service/api/users/register",
+              "host": ["{{base_url}}"],
+              "path": ["user-management-service", "api", "users", "register"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Important Notes for Testing
+
+1. **CORS**: If testing from browser-based Postman, ensure CORS is configured
+2. **Gateway**: All requests must go through the API Gateway (port 8765)
+3. **JWT Token**: Token expires after a set duration (check your config)
+4. **Database**: Ensure MySQL is running and databases are created
+5. **Services**: All microservices must be running for complete functionality
+
+### Testing Checklist ✅
+
+- [ ] Register a new user account
+- [ ] Login and receive JWT token
+- [ ] View list of all courses
+- [ ] Get details of a specific course
+- [ ] Create a new course (as instructor)
+- [ ] Update course details
+- [ ] Enroll in a course
+- [ ] View my enrollments
+- [ ] Process a payment
+- [ ] View payment history
+- [ ] Send a notification
+- [ ] View my notifications
+- [ ] Get course content
+- [ ] Update enrollment progress
+
+### Error Handling
+
+Common error responses:
+
+**401 Unauthorized:**
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid or expired token"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "error": "Not Found",
+  "message": "Resource not found"
+}
+```
+
+**400 Bad Request:**
+```json
+{
+  "error": "Bad Request",
+  "message": "Validation failed: email is required"
+}
+```
+
+---
+
 ## Base URL
 All API calls should be made through the API Gateway at: `http://localhost:8765`
 

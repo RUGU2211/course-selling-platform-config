@@ -40,6 +40,11 @@ spring:
           predicates:
             - Path=/course-management-service/api/reviews/**
 
+        - id: enrollment-service
+          uri: lb://enrollmentservice
+          predicates:
+            - Path=/enrollment-service/api/enrollments/**
+
         - id: course-management-service-categories
           uri: lb://course-management-service
           predicates:

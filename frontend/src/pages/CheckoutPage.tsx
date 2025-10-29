@@ -1,21 +1,25 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Card, CardContent, Typography, Box, TextField, Button, Stack } from '@mui/material';
+import { Container, Card, CardContent, Typography, Box, TextField, Button, Stack, Alert, Paper, Divider } from '@mui/material';
+import { CheckCircle } from '@mui/icons-material';
 import { fetchCourseById, processPaymentWorkflow } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const CheckoutPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { pushPopup } = useNotifications();
   const courseId = parseInt(id || '0');
 
   const [course, setCourse] = React.useState<any | null>(null);
   const [card, setCard] = React.useState({ number: '', name: '', expiry: '', cvv: '' });
   const [fieldErrors, setFieldErrors] = React.useState<{ number?: string; name?: string; expiry?: string; cvv?: string }>({});
   const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [paymentComplete, setPaymentComplete] = React.useState(false);
+  const [receipt, setReceipt] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
@@ -52,14 +56,34 @@ const CheckoutPage: React.FC = () => {
       const uid = Number(user.id) || 0;
       const amount = Number(course?.price || 0);
       const res = await processPaymentWorkflow(uid, courseId, amount);
-      if (res && res.status === 'success') {
-        setSuccess('Payment successful! You are enrolled.');
-        setTimeout(() => navigate('/dashboard'), 1200);
+      
+      if (res && (res.status === 'success' || res.payment)) {
+        // Show success notification
+        pushPopup('Payment Successful', `Your payment of $${amount.toFixed(2)} was processed successfully.`);
+        
+        // Generate receipt
+        const receiptData = {
+          orderId: res.payment?.transactionId || `TXN_${Date.now()}`,
+          userId: uid,
+          courseId: courseId,
+          courseTitle: course?.title,
+          amount: amount,
+          status: 'COMPLETED',
+          transactionId: res.payment?.transactionId || `TXN_${Date.now()}`,
+          date: new Date().toISOString(),
+          paymentMethod: 'Credit Card'
+        };
+        setReceipt(receiptData);
+        setPaymentComplete(true);
+        
+        // Redirect after delay
+        setTimeout(() => navigate('/dashboard'), 3000);
       } else {
         setError(res?.message || 'Payment failed. Please try again.');
       }
     } catch (e: any) {
       setError(e?.message || 'Payment failed. Please try again.');
+      pushPopup('Payment Failed', e?.message || 'Payment could not be processed.');
     }
     setLoading(false);
   };
@@ -80,6 +104,61 @@ const CheckoutPage: React.FC = () => {
   }
 
   if (!course) return null;
+
+  if (paymentComplete && receipt) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+        <Card>
+          <CardContent>
+            <Stack spacing={3} alignItems="center">
+              <CheckCircle sx={{ fontSize: 80, color: 'success.main' }} />
+              <Typography variant="h4" color="success.main" align="center">
+                Payment Successful!
+              </Typography>
+              <Typography variant="body1" align="center">
+                Redirecting to dashboard...
+              </Typography>
+              
+              <Paper sx={{ p: 3, width: '100%', bgcolor: 'grey.50' }}>
+                <Typography variant="h6" gutterBottom>Receipt</Typography>
+                <Divider sx={{ my: 2 }} />
+                <Stack spacing={1}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Course:</Typography>
+                    <Typography variant="body2" fontWeight="bold">{receipt.courseTitle}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Amount:</Typography>
+                    <Typography variant="body2" fontWeight="bold">${receipt.amount.toFixed(2)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Transaction ID:</Typography>
+                    <Typography variant="body2" fontWeight="bold" sx={{ fontFamily: 'monospace' }}>
+                      {receipt.transactionId}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Date:</Typography>
+                    <Typography variant="body2">{new Date(receipt.date).toLocaleString()}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Status:</Typography>
+                    <Typography variant="body2" color="success.main" fontWeight="bold">
+                      {receipt.status}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+              
+              <Button variant="contained" onClick={() => navigate('/student/payments')}>
+                View Payment History
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
@@ -108,7 +187,8 @@ const CheckoutPage: React.FC = () => {
               }}
               error={Boolean(fieldErrors.number)}
               helperText={fieldErrors.number}
-              inputProps={{ inputMode: 'numeric' }}
+              inputProps={{ inputMode: 'numeric', maxLength: 19 }}
+              placeholder="1234 5678 9012 3456"
             />
             <TextField
               label="Cardholder Name"
@@ -133,6 +213,7 @@ const CheckoutPage: React.FC = () => {
                 error={Boolean(fieldErrors.expiry)}
                 helperText={fieldErrors.expiry}
                 sx={{ flex: 1 }}
+                placeholder="12/25"
               />
               <TextField
                 label="CVV"
@@ -145,15 +226,14 @@ const CheckoutPage: React.FC = () => {
                 error={Boolean(fieldErrors.cvv)}
                 helperText={fieldErrors.cvv}
                 sx={{ flex: 1 }}
+                inputProps={{ maxLength: 4 }}
               />
             </Stack>
 
             {error && (
-              <Typography color="error" variant="body2">{error}</Typography>
+              <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
             )}
-            {success && (
-              <Typography color="success.main" variant="body2">{success}</Typography>
-            )}
+            
             <Button
               variant="contained"
               onClick={() => {
@@ -165,8 +245,14 @@ const CheckoutPage: React.FC = () => {
                 handlePay();
               }}
               disabled={loading}
+              fullWidth
+              size="large"
             >
               {loading ? 'Processing...' : 'Pay Now'}
+            </Button>
+            
+            <Button variant="text" onClick={() => navigate(-1)}>
+              Cancel
             </Button>
           </Box>
         </CardContent>

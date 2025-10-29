@@ -97,7 +97,7 @@ public class PaymentWorkflowController {
             history.put("user", user);
             
             // Get user's enrollments
-            Object enrollments = enrollmentServiceClient.getUserPayments(userId);
+            Object enrollments = enrollmentServiceClient.getByStudent(userId);
             history.put("enrollments", enrollments);
             
             history.put("status", "success");
