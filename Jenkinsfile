@@ -9,7 +9,7 @@ pipeline {
     stage('Build Backend (all modules)') {
       steps {
         sh '''
-          # Discover and build all module pom.xml files (excluding root if any)
+          # Discover and build each module by running inside its directory
           set -e
           POMS=$(find . -mindepth 2 -maxdepth 2 -name pom.xml | sort)
           if [ -z "$POMS" ]; then
@@ -17,8 +17,9 @@ pipeline {
             exit 1
           fi
           for pom in $POMS; do
-            echo "Packaging module for POM: $pom"
-            docker run --rm -v "$PWD":/ws -w /ws maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests -f "$pom" package || exit 1
+            moddir=$(dirname "$pom")
+            echo "Packaging module in: $moddir"
+            docker run --rm -v "$PWD":/ws -w "/ws/$moddir" maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests package || exit 1
           done
         '''
       }
