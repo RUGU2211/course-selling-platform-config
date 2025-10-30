@@ -20,14 +20,14 @@ pipeline {
           for POM in $POMS; do
             moddir=$(dirname "$POM")
             if [ -f "$POM" ]; then
-              echo "🚀 Packaging module in: $moddir"
+              echo "🚀 Packaging module in: $moddir (using mvnw)"
               ls -la "$moddir" || true
-              # Mount the module directory directly to avoid path translation issues
+              # Use JDK image and Maven Wrapper inside the project; ensure wrapper is executable
               docker run --rm \
                 -v "$PWD/$moddir":/build \
                 -w /build \
-                maven:3.9.9-eclipse-temurin-21 \
-                mvn -B -q -DskipTests clean package || exit 1
+                eclipse-temurin:21 \
+                bash -lc 'chmod +x mvnw 2>/dev/null || true; ./mvnw -q -DskipTests clean package' || exit 1
             else
               echo "⚠️ Skipping $moddir (no pom.xml found)"
             fi
