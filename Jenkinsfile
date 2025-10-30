@@ -9,8 +9,20 @@ pipeline {
     stage('Build Backend (all modules)') {
       steps {
         sh '''
-          # Build all Maven modules from the repo root (uses top-level pom.xml)
-          docker run --rm -v "$PWD":/build -w /build maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests package
+          # Build each service from its own pom.xml
+          for svc in \
+            api-gateway \
+            eureka-server \
+            config-server \
+            user-management-service \
+            course-management-service \
+            enrollmentservice \
+            payment \
+            notification-service \
+            content-delivery-service; do \
+            echo "Packaging $svc"; \
+            docker run --rm -v "$PWD":/ws -w /ws maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests -f $svc/pom.xml package || exit 1; \
+          done
         '''
       }
     }
