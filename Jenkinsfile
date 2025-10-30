@@ -9,19 +9,16 @@ pipeline {
     stage('Build Backend (all modules)') {
       steps {
         sh '''
-          # Build each service from its own pom.xml
-          for svc in \
-            api-gateway \
-            eureka-server \
-            config-server \
-            user-management-service \
-            course-management-service \
-            enrollmentservice \
-            payment \
-            notification-service \
-            content-delivery-service; do \
-            echo "Packaging $svc"; \
-            docker run --rm -v "$PWD":/ws -w /ws maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests -f $svc/pom.xml package || exit 1; \
+          # Discover and build all module pom.xml files (excluding root if any)
+          set -e
+          POMS=$(find . -mindepth 2 -maxdepth 2 -name pom.xml | sort)
+          if [ -z "$POMS" ]; then
+            echo "No module pom.xml files found. Ensure code is on the correct branch (master) and modules are present." >&2
+            exit 1
+          fi
+          for pom in $POMS; do
+            echo "Packaging module for POM: $pom"
+            docker run --rm -v "$PWD":/ws -w /ws maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests -f "$pom" package || exit 1
           done
         '''
       }
