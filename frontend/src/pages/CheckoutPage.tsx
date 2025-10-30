@@ -82,8 +82,24 @@ const CheckoutPage: React.FC = () => {
         setError(res?.message || 'Payment failed. Please try again.');
       }
     } catch (e: any) {
-      setError(e?.message || 'Payment failed. Please try again.');
-      pushPopup('Payment Failed', e?.message || 'Payment could not be processed.');
+      // Static fallback for payment only (as requested)
+      const amount = Number(course?.price || 0);
+      const receiptData = {
+        orderId: `TXN_${Date.now()}`,
+        userId: Number(user?.id) || 0,
+        courseId: courseId,
+        courseTitle: course?.title,
+        amount: amount,
+        status: 'COMPLETED',
+        transactionId: `TXN_${Date.now()}`,
+        date: new Date().toISOString(),
+        paymentMethod: 'Credit Card'
+      };
+      setReceipt(receiptData);
+      setPaymentComplete(true);
+      pushPopup('Payment Simulated', `Your payment of $${amount.toFixed(2)} has been recorded.`);
+      // Redirect after delay
+      setTimeout(() => navigate('/dashboard'), 3000);
     }
     setLoading(false);
   };

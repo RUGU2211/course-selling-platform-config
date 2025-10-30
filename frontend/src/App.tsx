@@ -17,6 +17,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CheckoutPage from './pages/CheckoutPage';
 import InstructorCreateCoursePage from './pages/InstructorCreateCoursePage';
 import StudentPaymentsPage from './pages/StudentPaymentsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 // Create theme
 const theme = createTheme({
@@ -62,8 +63,7 @@ const App: React.FC = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
-- +         <NotificationProvider>
-+         <NotificationProvider>
+          <NotificationProvider>
             <Router>
               <Routes>
                 {/* Public Routes */}
@@ -76,7 +76,7 @@ const App: React.FC = () => {
                   <Route path="courses" element={<CoursesPage />} />
                   <Route path="courses/:id" element={<CourseDetailPage />} />
                   <Route path="checkout/:id" element={<CheckoutPage />} />
-
+                  <Route path="notifications" element={<NotificationsPage />} />
 
                   <Route
                      path="student/payments"
@@ -126,8 +126,7 @@ const App: React.FC = () => {
                 </Route>
               </Routes>
             </Router>
-- +         </NotificationProvider>
-+         </NotificationProvider>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

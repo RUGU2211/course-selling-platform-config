@@ -1,11 +1,11 @@
 server:
-  port: 8086
+  port: 8087
 
 spring:
   application:
-    name: payment-service
+    name: content-delivery-service
   datasource:
-    url: jdbc:mysql://course-platform-mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://course-platform-mysql:3306/content_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -16,9 +16,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    database-platform: org.hibernate.dialect.MySQL8Dialect
-  profiles:
-    active: default
+    database-platform: org.hibernate.dialect.MySQLDialect
 
 eureka:
   client:
@@ -41,8 +39,3 @@ logging:
     org.springframework: INFO
     com.courseselling: DEBUG
 
-# RAZORPAY Integration (inject via environment or separate secure config repo)
-razorpay:
-  key:
-    id: ${RAZORPAY_KEY_ID:}
-    secret: ${RAZORPAY_KEY_SECRET:}

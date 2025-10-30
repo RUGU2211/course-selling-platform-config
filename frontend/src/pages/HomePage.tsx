@@ -16,7 +16,7 @@ import {
   AccessTime,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { fetchCourses, fetchGlobalRatingSummary, BackendCourse } from '../services/api';
+import { fetchCourses, fetchGlobalRatingSummary, BackendCourse, apiFetch } from '../services/api';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,31 +34,51 @@ const HomePage: React.FC = () => {
   const [featuredLoading, setFeaturedLoading] = React.useState<boolean>(false);
   const [featuredError, setFeaturedError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        // For now, students/instructors remain derived from local storage until user service integration
-        const raw = localStorage.getItem('static:users');
-        const users = raw ? JSON.parse(raw) as Array<{ role: string }> : [];
-        const students = users.filter(u => u.role === 'STUDENT').length;
-        const instructors = users.filter(u => u.role === 'INSTRUCTOR').length;
+  const loadStats = React.useCallback(async () => {
+    try {
+      const [courses, global] = await Promise.all([
+        fetchCourses().catch(() => [] as BackendCourse[]),
+        fetchGlobalRatingSummary().catch(() => ({ average: 0 } as any)),
+      ]);
 
-        const courses = await fetchCourses();
-        const global = await fetchGlobalRatingSummary();
-        if (!mounted) return;
-        setPlatformStats({
-          students,
-          courses: courses.length,
-          instructors,
-          avgRating: global?.average || 0,
+      // Try to fetch platform stats (requires admin token). If 401, fall back to zeros for users/instructors.
+      let students = 0;
+      let instructors = 0;
+      try {
+        const storedToken = localStorage.getItem('auth_token') || '';
+        const statsResp = await apiFetch<any>(`/user-management-service/api/users/stats`, {
+          headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : undefined,
         });
-      } catch (e) {
-        // swallow errors for home stats
-      }
-    })();
-    return () => { mounted = false; };
+        const s = statsResp?.stats || {};
+        students = Number(s.totalStudents || 0);
+        instructors = Number(s.totalInstructors || 0);
+      } catch {}
+
+      setPlatformStats({
+        students,
+        courses: courses.length,
+        instructors,
+        avgRating: Number((global as any)?.average || 0),
+      });
+    } catch {}
   }, []);
+
+  React.useEffect(() => {
+    (async () => {
+      await loadStats();
+    })();
+  }, [loadStats]);
+
+  // Realtime refresh for stats (poll + focus)
+  React.useEffect(() => {
+    const id = window.setInterval(() => { loadStats(); }, 20000);
+    const onFocus = () => loadStats();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [loadStats]);
 
   React.useEffect(() => {
     let mounted = true;

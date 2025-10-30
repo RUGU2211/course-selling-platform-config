@@ -50,7 +50,7 @@ services:
     networks:
       - microservices-network
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=git
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
       interval: 30s
@@ -198,8 +198,6 @@ services:
       - SPRING_DATASOURCE_PASSWORD=root
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
       - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
-      - RAZORPAY_KEY_ID=rzp_test_RFRsRbzTz9Hd8W
-      - RAZORPAY_KEY_SECRET=qobxRuHoIbt4WymMCtZAgR1o
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
       interval: 30s
@@ -262,7 +260,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
       - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
       - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID=true
     healthcheck:
@@ -292,32 +289,25 @@ services:
       retries: 5
       start_period: 30s
 
-  # Prometheus Monitoring
-  # Note: For local development, Prometheus, Grafana, and Jenkins are disabled.
-  # Uncomment below if you need them locally.
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   ports:
-  #     - "9090:9090"
-  #   volumes:
-  #     - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-  #     - prometheus-data:/prometheus
-  #   networks:
-  #     - microservices-network
-  #   depends_on:
-  #     - api-gateway
-  #
-  # grafana:
-  #   image: grafana/grafana:latest
-  #   ports:
-  #     - "3000:3000"
-  #   networks:
-  #     - microservices-network
-  #   depends_on:
-  #     - prometheus
+  # Jenkins (CI/CD)
+  jenkins:
+    build: ./ci/jenkins
+    container_name: course-platform-jenkins
+    user: root
+    ports:
+      - "8090:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${USERPROFILE}/.kube:/root/.kube
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks:
+      - microservices-network
 
 volumes:
   mysql-data:
+  jenkins_home:
 
 networks:
   microservices-network:

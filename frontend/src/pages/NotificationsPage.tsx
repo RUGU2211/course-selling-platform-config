@@ -19,7 +19,7 @@ const NotificationsPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Typography variant="h4">Notifications</Typography>
         <Stack direction="row" spacing={1}>
@@ -29,7 +29,7 @@ const NotificationsPage: React.FC = () => {
           <Button variant="contained" onClick={handleTestPopup}>Test Popup</Button>
         </Stack>
       </Stack>
-      <Card>
+      <Card elevation={1}>
         <CardContent>
           {notifications.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No notifications yet.</Typography>

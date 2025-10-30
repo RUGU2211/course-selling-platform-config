@@ -48,6 +48,30 @@ const StudentDashboard: React.FC = () => {
     return () => { mounted = false; };
   }, [user]);
 
+  // Realtime refresh for enrollments and payments
+  React.useEffect(() => {
+    if (!user?.id) return;
+    const tick = async () => {
+      try {
+        const enrolls = await getStudentEnrollments(Number(user.id));
+        setEnrollments(enrolls);
+        const coursePromises = enrolls.map((e: any) => fetchCourseById(e.courseId).catch(() => null));
+        const courseData = await Promise.all(coursePromises);
+        setCourses(courseData.filter(Boolean));
+        const payments = await getPaymentHistory(Number(user.id));
+        const spent = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        setTotalSpent(spent);
+      } catch {}
+    };
+    const id = window.setInterval(tick, 20000);
+    const onFocus = () => tick();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user]);
+
   const enrolledCourses = courses.map((course, index) => {
     const enrollment = enrollments[index];
     return {
@@ -61,21 +85,21 @@ const StudentDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 6, mb: 6 }}>
         <Typography>Loading...</Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 6, mb: 6 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Student Dashboard
       </Typography>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 4, mt: 3 }}>
         <Box>
-          <Card>
+          <Card elevation={1}>
             <CardContent>
               <Typography variant="h5" component="h2" gutterBottom>
                 My Enrolled Courses
@@ -117,7 +141,7 @@ const StudentDashboard: React.FC = () => {
         </Box>
 
         <Box>
-          <Card>
+          <Card elevation={1}>
             <CardContent>
               <Typography variant="h5" component="h2" gutterBottom>
                 Statistics

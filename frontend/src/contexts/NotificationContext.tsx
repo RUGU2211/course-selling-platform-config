@@ -32,6 +32,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     refresh();
   }, [refresh]);
 
+  // Realtime: poll periodically and refresh on window focus
+  React.useEffect(() => {
+    if (!user?.id) return;
+    const id = window.setInterval(() => {
+      refresh();
+    }, 15000);
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user, refresh]);
+
   const pushPopup = (title: string, message: string) => {
     setPopup({ open: true, title, message });
     // Also persist to backend if user is known

@@ -15,7 +15,6 @@ const InstructorCreateCoursePage: React.FC = () => {
     price: '',
     duration: '',
     description: '',
-    imageUrl: '',
     level: '',
     category: '',
     language: ''
@@ -69,7 +68,6 @@ const InstructorCreateCoursePage: React.FC = () => {
             <TextField label="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             <TextField label="Duration" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g., 12 hours" />
             <TextField label="Description" multiline minRows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <TextField label="Image URL" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
             <TextField label="Level" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} placeholder="Beginner / Intermediate / Advanced" />
             <TextField label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g., Web Development" />
             <TextField label="Language" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} placeholder="e.g., English" />
