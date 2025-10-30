@@ -41,8 +41,8 @@ logging:
     org.springframework: INFO
     com.courseselling: DEBUG
 
-# RAZORPAY Integration
 razorpay:
   key:
-    id: rzp_test_RFRsRbzTz9Hd8W
-    secret: qobxRuHoIbt4WymMCtZAgR1o
+    id: ${RAZORPAY_KEY_ID:}
+    secret: ${RAZORPAY_KEY_SECRET:}
+

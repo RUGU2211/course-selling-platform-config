@@ -38,3 +38,4 @@ eureka:
       defaultZone: http://course-platform-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+

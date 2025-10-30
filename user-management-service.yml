@@ -10,14 +10,17 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
 server:
   port: 8082
+
 eureka:
   client:
     service-url:
       defaultZone: http://course-platform-eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+
 management:
   endpoints:
     web:
@@ -26,7 +29,9 @@ management:
   endpoint:
     health:
       show-details: always
+
 logging:
   level:
     org.springframework: INFO
     com.courseplatform: DEBUG
+

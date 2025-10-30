@@ -38,3 +38,4 @@ logging:
   level:
     org.springframework: INFO
     com.courseselling: DEBUG
+
