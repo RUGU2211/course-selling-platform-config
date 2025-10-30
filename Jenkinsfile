@@ -20,12 +20,14 @@ pipeline {
           for POM in $POMS; do
             moddir=$(dirname "$POM")
             if [ -f "$POM" ]; then
-              echo "🚀 Packaging module in: $moddir"
+              echo "🚀 Packaging module via POM: $POM"
+              # Show directory contents for debugging if needed
+              ls -la "$moddir" || true
               docker run --rm \
                 -v "$PWD":/ws \
-                -w "/ws/$moddir" \
+                -w /ws \
                 maven:3.9.9-eclipse-temurin-21 \
-                mvn -B -q -DskipTests clean package
+                mvn -B -q -DskipTests -f "$POM" clean package || exit 1
             else
               echo "⚠️ Skipping $moddir (no pom.xml found)"
             fi
