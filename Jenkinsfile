@@ -14,10 +14,10 @@ pipeline {
           if [ -z "$POMS" ]; then echo "No pom.xml found"; exit 1; fi
           for POM in $POMS; do
             moddir=$(dirname "$POM")
-            absdir=$(cd "$moddir" && pwd -P)
-            echo "Running mvn in: $absdir"
-            docker run --rm -v "$absdir":/build -w /build maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipITs test || true
-            docker run --rm -v "$absdir":/build -w /build maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests clean package || exit 1
+            echo "Running mvn in: $moddir"
+            (cd "$moddir" && chmod +x mvnw 2>/dev/null || true)
+            (cd "$moddir" && ./mvnw -q -DskipITs test) || true
+            (cd "$moddir" && ./mvnw -q -DskipTests clean package) || exit 1
           done
         '''
       }
