@@ -1,6 +1,9 @@
 pipeline {
   agent any
   environment { KUBE_NAMESPACE = 'course-plat' }
+  parameters {
+    booleanParam(name: 'FORCE_DEPLOY', defaultValue: false, description: 'Deploy to Kubernetes regardless of branch')
+  }
   options { skipDefaultCheckout(false) }
   stages {
     stage('Checkout') { steps { checkout scm } }
@@ -16,8 +19,8 @@ pipeline {
             moddir=$(dirname "$POM")
             echo "Running mvn in: $moddir"
             (cd "$moddir" && chmod +x mvnw 2>/dev/null || true)
-            (cd "$moddir" && ./mvnw -q -DskipITs test) || true
-            (cd "$moddir" && ./mvnw -q -DskipTests clean package) || exit 1
+            (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false test) || true
+            (cd "$moddir" && ./mvnw -q -DskipTests -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false clean package) || exit 1
           done
         '''
       }
@@ -54,9 +57,10 @@ pipeline {
     }
 
     stage('Deploy to K8s') {
-      when { expression { env.BRANCH_NAME == 'master' } }
+      when { expression { return (env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'main' || params.FORCE_DEPLOY == true) } }
       steps {
         sh '''
+          echo "BRANCH_NAME=$BRANCH_NAME FORCE_DEPLOY=$FORCE_DEPLOY"
           kubectl create ns $KUBE_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
           kubectl -n $KUBE_NAMESPACE apply -f k8s/ || true
           for d in api-gateway eureka-server config-server user-service course-service enrollment-service payment-service notification-service content-service frontend; do
