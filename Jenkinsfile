@@ -5,28 +5,12 @@ pipeline {
   }
   options { skipDefaultCheckout(false) }
   stages {
-    stage('Checkout') {
-      steps { checkout scm }
-    }
-    stage('Unit Tests') {
+    stage('Checkout') { steps { checkout scm } }
+    stage('Build Backend (all modules)') {
       steps {
         sh '''
-          for svc in api-gateway eureka-server config-server user-management-service course-management-service enrollmentservice payment notification-service content-delivery-service; do \
-            echo "Running tests for $svc"; \
-            docker run --rm -v "$PWD/$svc":/build -w /build maven:3.9.9-eclipse-temurin-21 mvn -q -DskipITs test || true; \
-          done
-          # Optional frontend tests (skip if not set up)
-          true
-        '''
-      }
-    }
-    stage('Package Backend') {
-      steps {
-        sh '''
-          for svc in api-gateway eureka-server config-server user-management-service course-management-service enrollmentservice payment notification-service content-delivery-service; do \
-            echo "Packaging $svc"; \
-            docker run --rm -v "$PWD/$svc":/build -w /build maven:3.9.9-eclipse-temurin-21 mvn -q -DskipTests package || exit 1; \
-          done
+          # Build all Maven modules from the repo root (uses top-level pom.xml)
+          docker run --rm -v "$PWD":/build -w /build maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests package
         '''
       }
     }
@@ -67,6 +51,7 @@ pipeline {
       steps { input message: 'Deploy to Kubernetes?' }
     }
     stage('Deploy to K8s') {
+      when { expression { env.BRANCH_NAME == 'master' } }
       steps {
         sh '''
           kubectl create ns $KUBE_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
