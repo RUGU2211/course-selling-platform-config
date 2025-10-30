@@ -4,17 +4,13 @@ server:
 spring:
   application:
     name: config-server
-  profiles:
-    active: git
   cloud:
     config:
       server:
         git:
           uri: https://github.com/RUGU2211/course-selling-platform-config.git
-          search-paths: .
           clone-on-start: true
-          force-pull: true
-          timeout: 10
+          default-label: main
 
 eureka:
   client:
