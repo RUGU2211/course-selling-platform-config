@@ -9,17 +9,26 @@ pipeline {
     stage('Build Backend (all modules)') {
       steps {
         sh '''
-          # Discover and build each module by running inside its directory
           set -e
-          POMS=$(find . -mindepth 2 -maxdepth 2 -name pom.xml | sort)
+          echo "🔍 Scanning for modules with pom.xml..."
+          # Only include directories that actually contain a pom.xml (ignore actuator if present)
+          POMS=$(find . -mindepth 2 -maxdepth 2 -name pom.xml | grep -v actuator | sort)
           if [ -z "$POMS" ]; then
-            echo "No module pom.xml files found. Ensure code is on the correct branch (master) and modules are present." >&2
+            echo "❌ No pom.xml files found!"
             exit 1
           fi
-          for pom in $POMS; do
-            moddir=$(dirname "$pom")
-            echo "Packaging module in: $moddir"
-            docker run --rm -v "$PWD":/ws -w "/ws/$moddir" maven:3.9.9-eclipse-temurin-21 mvn -B -q -DskipTests package || exit 1
+          for POM in $POMS; do
+            moddir=$(dirname "$POM")
+            if [ -f "$POM" ]; then
+              echo "🚀 Packaging module in: $moddir"
+              docker run --rm \
+                -v "$PWD":/ws \
+                -w "/ws/$moddir" \
+                maven:3.9.9-eclipse-temurin-21 \
+                mvn -B -q -DskipTests clean package
+            else
+              echo "⚠️ Skipping $moddir (no pom.xml found)"
+            fi
           done
         '''
       }
