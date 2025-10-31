@@ -27,4 +27,5 @@ RUN jenkins-plugin-cli --plugins \
   configuration-as-code
 # Disable setup wizard
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
-USER jenkins
+# Keep as root user - docker-compose will control the user
+# USER jenkins

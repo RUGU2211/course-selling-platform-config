@@ -303,8 +303,10 @@ services:
       - ${USERPROFILE}/.kube:/root/.kube
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - DOCKER_HOST=unix:///var/run/docker.sock
     networks:
       - microservices-network
+    privileged: true
 
 volumes:
   mysql-data:
