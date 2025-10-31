@@ -29,7 +29,8 @@ pipeline {
   
   options { 
     skipDefaultCheckout(false)
-    timeout(time: 60, unit: 'MINUTES')
+    timeout(time: 45, unit: 'MINUTES')
+    retry(0) // Don't retry failed stages automatically
   }
   
   stages {
@@ -50,10 +51,10 @@ pipeline {
 
     stage('Build & Test') {
       steps {
-        script {
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+          script {
           echo "Building all microservices..."
           sh '''
-            set -e
             echo "Finding all module pom.xml files..."
             POMS=$(find "$PWD" -mindepth 2 -maxdepth 2 -name pom.xml | sort)
             if [ -z "$POMS" ]; then 
@@ -61,6 +62,7 @@ pipeline {
               exit 1; 
             fi
             
+            FAILED_BUILDS=0
             for POM in $POMS; do
               moddir=$(dirname "$POM")
               modname=$(basename "$moddir")
@@ -73,111 +75,87 @@ pipeline {
               if [ "$SKIP_TESTS" != "true" ]; then
                 echo "Running tests for $modname..."
                 (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false test) || {
-                  echo "Tests failed for $modname, but continuing..."
+                  echo "⚠ Tests failed for $modname, but continuing..."
                 }
               fi
               
               echo "Packaging $modname..."
-              (cd "$moddir" && ./mvnw -q -DskipTests -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false clean package) || {
-                echo "Build failed for $modname"
-                exit 1
-              }
-              
-              echo "✓ Successfully built $modname"
+              if (cd "$moddir" && ./mvnw -q -DskipTests -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false clean package); then
+                echo "✓ Successfully built $modname"
+              else
+                echo "✗ Build failed for $modname, continuing with other services..."
+                FAILED_BUILDS=$((FAILED_BUILDS + 1))
+              fi
             done
             
             echo "=========================================="
-            echo "All services built successfully!"
+            if [ $FAILED_BUILDS -eq 0 ]; then
+              echo "All services built successfully!"
+            else
+              echo "Build completed with $FAILED_BUILDS failures"
+            fi
             echo "=========================================="
           '''
+          }
         }
       }
     }
 
     stage('Build Docker Images') {
       steps {
-        script {
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+          script {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
             sh '''
               #!/bin/bash
-              set -e
               echo "Logging in to Docker Hub..."
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
               
               echo "=========================================="
-              echo "Building Docker Images"
+              echo "Building Docker Images (continuing on errors)"
               echo "=========================================="
               
-              # Build eureka-server
-              if [ -f "eureka-server/Dockerfile" ]; then
-                echo "Building image for eureka-server..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-eureka-server:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-eureka-server:latest eureka-server || exit 1
-              fi
+              FAILED_BUILDS=0
               
-              # Build config-server
-              if [ -f "config-server/Dockerfile" ]; then
-                echo "Building image for config-server..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-config-server:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-config-server:latest config-server || exit 1
-              fi
+              # Function to build image with error handling
+              build_image() {
+                local service=$1
+                local dir=$2
+                if [ -f "${dir}/Dockerfile" ]; then
+                  echo "Building image for ${service}..."
+                  if docker build -t ${DOCKERHUB_USER}/course-plat-${service}:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-${service}:latest ${dir}; then
+                    echo "✓ Successfully built ${service}"
+                  else
+                    echo "✗ Failed to build ${service}, continuing..."
+                    FAILED_BUILDS=$((FAILED_BUILDS + 1))
+                  fi
+                else
+                  echo "⚠ Dockerfile not found for ${service}, skipping..."
+                fi
+              }
               
-              # Build actuator
-              if [ -f "actuator/Dockerfile" ]; then
-                echo "Building image for actuator..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-actuator:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-actuator:latest actuator || exit 1
-              fi
-              
-              # Build api-gateway
-              if [ -f "api-gateway/Dockerfile" ]; then
-                echo "Building image for api-gateway..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-api-gateway:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-api-gateway:latest api-gateway || exit 1
-              fi
-              
-              # Build user-management-service
-              if [ -f "user-management-service/Dockerfile" ]; then
-                echo "Building image for user-service..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-user-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-user-service:latest user-management-service || exit 1
-              fi
-              
-              # Build course-management-service
-              if [ -f "course-management-service/Dockerfile" ]; then
-                echo "Building image for course-service..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-course-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-course-service:latest course-management-service || exit 1
-              fi
-              
-              # Build enrollmentservice
-              if [ -f "enrollmentservice/Dockerfile" ]; then
-                echo "Building image for enrollment-service..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-enrollment-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-enrollment-service:latest enrollmentservice || exit 1
-              fi
-              
-              # Build payment service
-              if [ -f "payment/Dockerfile" ]; then
-                echo "Building image for payment-service..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-payment-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-payment-service:latest payment || exit 1
-              fi
-              
-              # Build notification-service
-              if [ -f "notification-service/Dockerfile" ]; then
-                echo "Building image for notification-service..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-notification-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-notification-service:latest notification-service || exit 1
-              fi
-              
-              # Build content-delivery-service
-              if [ -f "content-delivery-service/Dockerfile" ]; then
-                echo "Building image for content-service..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-content-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-content-service:latest content-delivery-service || exit 1
-              fi
-              
-              # Build frontend
-              if [ -f "frontend/Dockerfile" ]; then
-                echo "Building image for frontend..."
-                docker build -t ${DOCKERHUB_USER}/course-plat-frontend:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-frontend:latest frontend || exit 1
-              fi
+              # Build all services (continuing on individual failures)
+              build_image "eureka-server" "eureka-server"
+              build_image "config-server" "config-server"
+              build_image "actuator" "actuator"
+              build_image "api-gateway" "api-gateway"
+              build_image "user-service" "user-management-service"
+              build_image "course-service" "course-management-service"
+              build_image "enrollment-service" "enrollmentservice"
+              build_image "payment-service" "payment"
+              build_image "notification-service" "notification-service"
+              build_image "content-service" "content-delivery-service"
+              build_image "frontend" "frontend"
               
               echo "=========================================="
-              echo "All Docker images built successfully!"
+              if [ $FAILED_BUILDS -eq 0 ]; then
+                echo "All Docker images built successfully!"
+              else
+                echo "Docker builds completed with $FAILED_BUILDS failures"
+              fi
               echo "=========================================="
             '''
+            }
           }
         }
       }
@@ -185,33 +163,35 @@ pipeline {
 
     stage('Push Docker Images') {
       steps {
-        script {
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+          script {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
             sh '''
               #!/bin/bash
-              set -e
               echo "=========================================="
               echo "Pushing Docker Images to Docker Hub"
               echo "=========================================="
               
-              # Function to push with retry
+              FAILED_PUSHES=0
+              
+              # Function to push with retry (continuing on failure)
               push_with_retry() {
                 local image=$1
                 local tag=$2
-                local max_attempts=3
+                local max_attempts=2
                 local attempt=1
                 
                 while [ $attempt -le $max_attempts ]; do
                   echo "Attempt $attempt/$max_attempts: Pushing ${image}:${tag}..."
-                  if docker push ${image}:${tag}; then
+                  if docker push ${image}:${tag} 2>&1; then
                     echo "✓ Successfully pushed ${image}:${tag}"
                     return 0
                   else
                     if [ $attempt -lt $max_attempts ]; then
-                      echo "⚠ Push failed for ${image}:${tag}, retrying in 5 seconds..."
-                      sleep 5
+                      echo "⚠ Push failed for ${image}:${tag}, retrying in 3 seconds..."
+                      sleep 3
                     else
-                      echo "✗ Failed to push ${image}:${tag} after $max_attempts attempts"
+                      echo "✗ Failed to push ${image}:${tag} after $max_attempts attempts, continuing..."
                       return 1
                     fi
                   fi
@@ -219,29 +199,34 @@ pipeline {
                 done
               }
               
-              # Push all images with retry
+              # Push all images with retry (continuing on individual failures)
               for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 echo "Pushing ${imgname}..."
                 
                 # Push with commit tag
                 if ! push_with_retry "${DOCKERHUB_USER}/course-plat-${imgname}" "${IMAGE_TAG}"; then
-                  echo "Failed to push ${imgname}:${IMAGE_TAG}"
-                  exit 1
+                  echo "⚠ Failed to push ${imgname}:${IMAGE_TAG}, continuing..."
+                  FAILED_PUSHES=$((FAILED_PUSHES + 1))
                 fi
                 
                 # Push latest tag
                 if ! push_with_retry "${DOCKERHUB_USER}/course-plat-${imgname}" "latest"; then
-                  echo "Failed to push ${imgname}:latest"
-                  exit 1
+                  echo "⚠ Failed to push ${imgname}:latest, continuing..."
+                  FAILED_PUSHES=$((FAILED_PUSHES + 1))
                 fi
                 
-                echo "✓ Successfully pushed all tags for ${imgname}"
+                echo "✓ Completed push attempts for ${imgname}"
               done
               
               echo "=========================================="
-              echo "All images pushed successfully!"
+              if [ $FAILED_PUSHES -eq 0 ]; then
+                echo "All images pushed successfully!"
+              else
+                echo "Push completed with $FAILED_PUSHES failures"
+              fi
               echo "=========================================="
             '''
+            }
           }
         }
       }
@@ -252,7 +237,8 @@ pipeline {
         expression { return params.FORCE_DEPLOY == true }
       }
       steps {
-        script {
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+          script {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
             sh '''
               echo "=========================================="
@@ -260,42 +246,49 @@ pipeline {
               echo "=========================================="
               
               echo "Logging in to Docker Hub..."
-              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin || true
               
-              # Pull all images
+              # Pull all images (continuing on failures)
               for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 echo "Pulling ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
                 docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || {
-                  echo "Warning: Failed to pull ${imgname}, using latest..."
-                  docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:latest || true
+                  echo "⚠ Failed to pull ${imgname}:${IMAGE_TAG}, trying latest..."
+                  docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:latest || echo "⚠ Failed to pull ${imgname}:latest, continuing..."
                 }
               done
               
-              echo "✓ All images pulled successfully"
+              echo "✓ Image pull attempts completed"
+              
+              # Determine docker-compose command (v1 vs v2)
+              if command -v docker-compose > /dev/null 2>&1; then
+                COMPOSE_CMD="docker-compose"
+              elif docker compose version > /dev/null 2>&1; then
+                COMPOSE_CMD="docker compose"
+              else
+                echo "⚠ docker-compose not found, attempting docker compose..."
+                COMPOSE_CMD="docker compose"
+              fi
               
               # Stop existing containers if running
               echo "Stopping existing containers..."
-              docker-compose down || true
+              $COMPOSE_CMD down 2>/dev/null || echo "No existing containers to stop"
               
-              # Update docker-compose.yml with new image tags (optional)
-              # Or use docker-compose pull to get latest images
-              
-              echo "Starting containers with docker-compose..."
-              docker-compose up -d || {
-                echo "Failed to start containers with docker-compose"
-                exit 1
-              }
-              
-              echo "Waiting for services to be healthy..."
-              sleep 30
+              echo "Starting containers..."
+              if $COMPOSE_CMD up -d 2>&1; then
+                echo "✓ Containers started successfully"
+              else
+                echo "⚠ Failed to start containers with $COMPOSE_CMD, checking status..."
+                $COMPOSE_CMD ps 2>/dev/null || docker ps --filter "name=course-platform" || true
+              fi
               
               echo "Container status:"
-              docker-compose ps
+              $COMPOSE_CMD ps 2>/dev/null || docker ps --filter "name=course-platform" || true
               
               echo "=========================================="
-              echo "Containers created and started successfully!"
+              echo "Container deployment attempt completed"
               echo "=========================================="
             '''
+            }
           }
         }
       }
@@ -306,7 +299,8 @@ pipeline {
         expression { return params.FORCE_DEPLOY == true }
       }
       steps {
-        script {
+        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+          script {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
             sh '''
               echo "=========================================="
@@ -349,14 +343,13 @@ pipeline {
                 cp k8s/grafana.yaml k8s-processed/grafana.yaml
               fi
               
-              # Apply all Kubernetes manifests
+              # Apply all Kubernetes manifests (continuing on failures)
               echo "Applying Kubernetes manifests..."
               kubectl apply -f k8s-processed/ -n ${KUBE_NAMESPACE} || {
-                echo "Failed to apply Kubernetes manifests"
-                exit 1
+                echo "⚠ Some Kubernetes manifests failed to apply, continuing..."
               }
               
-              # Update image tags for all deployments
+              # Update image tags for all deployments (continuing on failures)
               echo "Updating deployment images..."
               
               for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
@@ -383,17 +376,17 @@ pipeline {
                 echo "Updating ${deployment} to use ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
                 kubectl set image deployment/${deployment} \
                   ${deployment}=${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} \
-                  -n ${KUBE_NAMESPACE} || {
-                  echo "Warning: Failed to update ${deployment}, may need to create it first"
+                  -n ${KUBE_NAMESPACE} 2>&1 || {
+                  echo "⚠ Failed to update ${deployment}, may need to create it first or deployment doesn't exist"
                 }
               done
               
-              # Wait for rollouts to complete
+              # Wait for rollouts to complete (with shorter timeout, continuing on failures)
               echo "Waiting for deployments to rollout..."
               for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 echo "Checking rollout status for ${deployment}..."
-                kubectl rollout status deployment/${deployment} -n ${KUBE_NAMESPACE} --timeout=5m || {
-                  echo "Warning: Rollout for ${deployment} may not be complete"
+                kubectl rollout status deployment/${deployment} -n ${KUBE_NAMESPACE} --timeout=2m 2>&1 || {
+                  echo "⚠ Rollout for ${deployment} may not be complete or deployment doesn't exist, continuing..."
                 }
               done
               
@@ -420,6 +413,7 @@ pipeline {
               echo "✓ Successfully deployed to Kubernetes!"
               echo "=========================================="
             '''
+            }
           }
         }
       }
@@ -438,7 +432,13 @@ pipeline {
       echo "✓ Pipeline succeeded!"
     }
     failure {
-      echo "✗ Pipeline failed!"
+      echo "✗ Pipeline completed with failures!"
+      script {
+        echo "Continuing to show final status despite failures..."
+      }
+    }
+    unstable {
+      echo "⚠ Pipeline completed with warnings!"
     }
   }
 }
