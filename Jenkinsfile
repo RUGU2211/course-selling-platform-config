@@ -68,7 +68,7 @@ pipeline {
               
               if [ "$SKIP_TESTS" != "true" ]; then
                 echo "Running tests for $modname..."
-                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false test) || {
+                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false -Dspring.datasource.url=jdbc:h2:mem:test test) || {
                   echo "Tests failed for $modname, but continuing..."
                 }
               fi
@@ -95,6 +95,8 @@ pipeline {
         script {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
             sh '''
+              #!/bin/bash
+              set -e
               echo "Logging in to Docker Hub..."
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
               
@@ -102,36 +104,71 @@ pipeline {
               echo "Building Docker Images"
               echo "=========================================="
               
-              SERVICES=(
-                "eureka-server:eureka-server"
-                "config-server:config-server"
-                "actuator:actuator"
-                "api-gateway:api-gateway"
-                "user-management-service:user-service"
-                "course-management-service:course-service"
-                "enrollmentservice:enrollment-service"
-                "payment:payment-service"
-                "notification-service:notification-service"
-                "content-delivery-service:content-service"
-                "frontend:frontend"
-              )
+              # Build eureka-server
+              if [ -f "eureka-server/Dockerfile" ]; then
+                echo "Building image for eureka-server..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-eureka-server:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-eureka-server:latest eureka-server || exit 1
+              fi
               
-              for service_info in "${SERVICES[@]}"; do
-                IFS=':' read -r dirname imgname <<< "$service_info"
-                
-                if [ -f "$dirname/Dockerfile" ]; then
-                  echo "Building image for $imgname (directory: $dirname)..."
-                  docker build -t ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} \
-                                -t ${DOCKERHUB_USER}/course-plat-${imgname}:latest \
-                                $dirname || {
-                    echo "Failed to build image for $imgname"
-                    exit 1
-                  }
-                  echo "✓ Successfully built ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}"
-                else
-                  echo "⚠ No Dockerfile found for $dirname, skipping..."
-                fi
-              done
+              # Build config-server
+              if [ -f "config-server/Dockerfile" ]; then
+                echo "Building image for config-server..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-config-server:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-config-server:latest config-server || exit 1
+              fi
+              
+              # Build actuator
+              if [ -f "actuator/Dockerfile" ]; then
+                echo "Building image for actuator..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-actuator:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-actuator:latest actuator || exit 1
+              fi
+              
+              # Build api-gateway
+              if [ -f "api-gateway/Dockerfile" ]; then
+                echo "Building image for api-gateway..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-api-gateway:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-api-gateway:latest api-gateway || exit 1
+              fi
+              
+              # Build user-management-service
+              if [ -f "user-management-service/Dockerfile" ]; then
+                echo "Building image for user-service..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-user-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-user-service:latest user-management-service || exit 1
+              fi
+              
+              # Build course-management-service
+              if [ -f "course-management-service/Dockerfile" ]; then
+                echo "Building image for course-service..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-course-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-course-service:latest course-management-service || exit 1
+              fi
+              
+              # Build enrollmentservice
+              if [ -f "enrollmentservice/Dockerfile" ]; then
+                echo "Building image for enrollment-service..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-enrollment-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-enrollment-service:latest enrollmentservice || exit 1
+              fi
+              
+              # Build payment service
+              if [ -f "payment/Dockerfile" ]; then
+                echo "Building image for payment-service..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-payment-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-payment-service:latest payment || exit 1
+              fi
+              
+              # Build notification-service
+              if [ -f "notification-service/Dockerfile" ]; then
+                echo "Building image for notification-service..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-notification-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-notification-service:latest notification-service || exit 1
+              fi
+              
+              # Build content-delivery-service
+              if [ -f "content-delivery-service/Dockerfile" ]; then
+                echo "Building image for content-service..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-content-service:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-content-service:latest content-delivery-service || exit 1
+              fi
+              
+              # Build frontend
+              if [ -f "frontend/Dockerfile" ]; then
+                echo "Building image for frontend..."
+                docker build -t ${DOCKERHUB_USER}/course-plat-frontend:${IMAGE_TAG} -t ${DOCKERHUB_USER}/course-plat-frontend:latest frontend || exit 1
+              fi
               
               echo "=========================================="
               echo "All Docker images built successfully!"
@@ -147,33 +184,17 @@ pipeline {
         script {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
             sh '''
+              #!/bin/bash
+              set -e
               echo "=========================================="
               echo "Pushing Docker Images to Docker Hub"
               echo "=========================================="
               
-              IMAGES=(
-                "eureka-server"
-                "config-server"
-                "api-gateway"
-                "user-service"
-                "course-service"
-                "enrollment-service"
-                "payment-service"
-                "notification-service"
-                "content-service"
-                "frontend"
-              )
-              
-              for imgname in "${IMAGES[@]}"; do
+              # Push all images
+              for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 echo "Pushing ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
-                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || {
-                  echo "Failed to push ${imgname}"
-                  exit 1
-                }
-                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:latest || {
-                  echo "Failed to push ${imgname}:latest"
-                  exit 1
-                }
+                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || exit 1
+                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:latest || exit 1
                 echo "✓ Successfully pushed ${imgname}"
               done
               
@@ -201,21 +222,8 @@ pipeline {
               echo "Logging in to Docker Hub..."
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
               
-              IMAGES=(
-                "eureka-server"
-                "config-server"
-                "api-gateway"
-                "user-service"
-                "course-service"
-                "enrollment-service"
-                "payment-service"
-                "notification-service"
-                "content-service"
-                "frontend"
-              )
-              
               # Pull all images
-              for imgname in "${IMAGES[@]}"; do
+              for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 echo "Pulling ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
                 docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || {
                   echo "Warning: Failed to pull ${imgname}, using latest..."
@@ -310,21 +318,8 @@ pipeline {
               
               # Update image tags for all deployments
               echo "Updating deployment images..."
-              DEPLOYMENTS=(
-                "eureka-server"
-                "config-server"
-                "actuator"
-                "api-gateway"
-                "user-service"
-                "course-service"
-                "enrollment-service"
-                "payment-service"
-                "notification-service"
-                "content-service"
-                "frontend"
-              )
               
-              for deployment in "${DEPLOYMENTS[@]}"; do
+              for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 imgname=$(echo $deployment | sed 's/-service//' | sed 's/service$/service/')
                 case $deployment in
                   "eureka-server") imgname="eureka-server" ;;
@@ -355,7 +350,7 @@ pipeline {
               
               # Wait for rollouts to complete
               echo "Waiting for deployments to rollout..."
-              for deployment in "${DEPLOYMENTS[@]}"; do
+              for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
                 echo "Checking rollout status for ${deployment}..."
                 kubectl rollout status deployment/${deployment} -n ${KUBE_NAMESPACE} --timeout=5m || {
                   echo "Warning: Rollout for ${deployment} may not be complete"
