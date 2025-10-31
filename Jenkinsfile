@@ -20,7 +20,6 @@ pipeline {
   
   environment { 
     KUBE_NAMESPACE = 'course-plat'
-    IMAGE_REGISTRY = credentials('dockerhub-creds') ? '${DOCKERHUB_USER}' : 'localhost'
   }
   
   parameters {
@@ -31,7 +30,6 @@ pipeline {
   options { 
     skipDefaultCheckout(false)
     timeout(time: 60, unit: 'MINUTES')
-    timestamps()
   }
   
   stages {
