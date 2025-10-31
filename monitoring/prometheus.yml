@@ -1,0 +1,73 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'course-platform'
+    replica: '0'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Eureka Server
+  - job_name: 'eureka-server'
+    static_configs:
+      - targets: ['course-platform-eureka:8761']
+    metrics_path: /actuator/prometheus
+
+  # Config Server
+  - job_name: 'config-server'
+    static_configs:
+      - targets: ['course-platform-config:8888']
+    metrics_path: /actuator/prometheus
+
+  # Actuator Service
+  - job_name: 'actuator'
+    static_configs:
+      - targets: ['actuator:8081']
+    metrics_path: /actuator/prometheus
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['course-platform-api-gateway:8765']
+    metrics_path: /actuator/prometheus
+
+  # User Service
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['course-platform-user-service:8082']
+    metrics_path: /actuator/prometheus
+
+  # Course Service
+  - job_name: 'course-service'
+    static_configs:
+      - targets: ['course-platform-course-service:8083']
+    metrics_path: /actuator/prometheus
+
+  # Enrollment Service
+  - job_name: 'enrollment-service'
+    static_configs:
+      - targets: ['course-platform-enrollment-service:8084']
+    metrics_path: /actuator/prometheus
+
+  # Payment Service
+  - job_name: 'payment-service'
+    static_configs:
+      - targets: ['course-platform-payment-service:8086']
+    metrics_path: /actuator/prometheus
+
+  # Notification Service
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['course-platform-notification-service:8085']
+    metrics_path: /actuator/prometheus
+
+  # Content Service
+  - job_name: 'content-service'
+    static_configs:
+      - targets: ['course-platform-content-service:8087']
+    metrics_path: /actuator/prometheus
+

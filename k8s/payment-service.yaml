@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: course-plat
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  SPRING_APPLICATION_NAME: "payment-service"
+  SPRING_DATASOURCE_USERNAME: "root"
+  SPRING_DATASOURCE_PASSWORD: "root"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+  SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: course-plat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      imagePullSecrets:
+      - name: dockerhub-secret
+      containers:
+      - name: payment-service
+        image: DOCKERHUB_USER/course-plat-payment-service:IMAGE_TAG
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8086
+          name: http
+        - containerPort: 8081
+          name: metrics
+        envFrom:
+        - configMapRef:
+            name: payment-service-config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8086
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8086
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: course-plat
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 8086
+    targetPort: 8086
+    name: http
+  - port: 8081
+    targetPort: 8081
+    name: metrics
+

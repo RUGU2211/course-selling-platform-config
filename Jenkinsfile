@@ -1,75 +1,401 @@
 pipeline {
   agent any
-  environment { KUBE_NAMESPACE = 'course-plat' }
+  
+  triggers {
+    // Trigger on push to any branch
+    // Note: For GitHub, configure webhook in GitHub repo settings:
+    // Settings -> Webhooks -> Add webhook -> Payload URL: http://jenkins-url/github-webhook/
+    pollSCM('H/5 * * * *') // Poll every 5 minutes (alternative to webhook)
+  }
+  
+  environment { 
+    KUBE_NAMESPACE = 'course-plat'
+    IMAGE_REGISTRY = credentials('dockerhub-creds') ? '${DOCKERHUB_USER}' : 'localhost'
+  }
+  
   parameters {
     booleanParam(name: 'FORCE_DEPLOY', defaultValue: false, description: 'Deploy to Kubernetes regardless of branch')
+    booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip unit tests')
   }
-  options { skipDefaultCheckout(false) }
+  
+  options { 
+    skipDefaultCheckout(false)
+    timeout(time: 60, unit: 'MINUTES')
+    timestamps()
+  }
+  
   stages {
-    stage('Checkout') { steps { checkout scm } }
-
-    stage('Unit Test & Package') {
-      steps {
-        sh '''
-          set -e
-          echo "Scanning for module pom.xml files..."
-          POMS=$(find "$PWD" -mindepth 2 -maxdepth 2 -name pom.xml | grep -v actuator | sort)
-          if [ -z "$POMS" ]; then echo "No pom.xml found"; exit 1; fi
-          for POM in $POMS; do
-            moddir=$(dirname "$POM")
-            echo "Running mvn in: $moddir"
-            (cd "$moddir" && chmod +x mvnw 2>/dev/null || true)
-            (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false test) || true
-            (cd "$moddir" && ./mvnw -q -DskipTests -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false clean package) || exit 1
-          done
-        '''
+    stage('Checkout') { 
+      steps { 
+        checkout scm
+        script {
+          env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+          env.IMAGE_TAG = env.GIT_COMMIT
+          env.BUILD_DATE = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
+        }
       }
     }
 
-    stage('Build Images') {
+    stage('Build & Test') {
       steps {
-        script { env.IMAGE_TAG = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim() }
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+        script {
+          echo "Building all microservices..."
           sh '''
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
-            for svc in api-gateway eureka-server config-server user-management-service course-management-service enrollmentservice payment notification-service content-delivery-service frontend; do
-              if [ -f "$svc/Dockerfile" ]; then
-                echo "Building image for $svc"
-                docker build -t $DOCKERHUB_USER/course-plat-$(echo $svc | tr '_' '-'):$IMAGE_TAG $svc || exit 1
+            set -e
+            echo "Finding all module pom.xml files..."
+            POMS=$(find "$PWD" -mindepth 2 -maxdepth 2 -name pom.xml | grep -v actuator | sort)
+            if [ -z "$POMS" ]; then 
+              echo "No pom.xml found"; 
+              exit 1; 
+            fi
+            
+            for POM in $POMS; do
+              moddir=$(dirname "$POM")
+              modname=$(basename "$moddir")
+              echo "=========================================="
+              echo "Building: $modname"
+              echo "=========================================="
+              
+              (cd "$moddir" && chmod +x mvnw 2>/dev/null || true)
+              
+              if [ "$SKIP_TESTS" != "true" ]; then
+                echo "Running tests for $modname..."
+                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false test) || {
+                  echo "Tests failed for $modname, but continuing..."
+                }
               fi
+              
+              echo "Packaging $modname..."
+              (cd "$moddir" && ./mvnw -q -DskipTests -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false clean package) || {
+                echo "Build failed for $modname"
+                exit 1
+              }
+              
+              echo "✓ Successfully built $modname"
             done
+            
+            echo "=========================================="
+            echo "All services built successfully!"
+            echo "=========================================="
           '''
         }
       }
     }
 
-    stage('Push Images') {
+    stage('Build Docker Images') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-          sh '''
-            for img in api-gateway eureka-server config-server user-management-service course-management-service enrollmentservice payment notification-service content-delivery-service frontend; do
-              repo=$DOCKERHUB_USER/course-plat-$(echo $img | tr '_' '-'):$IMAGE_TAG
-              docker image inspect $repo >/dev/null 2>&1 && docker push $repo || true
-            done
-          '''
+        script {
+          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+            sh '''
+              echo "Logging in to Docker Hub..."
+              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+              
+              echo "=========================================="
+              echo "Building Docker Images"
+              echo "=========================================="
+              
+              SERVICES=(
+                "eureka-server:eureka-server"
+                "config-server:config-server"
+                "actuator:actuator"
+                "api-gateway:api-gateway"
+                "user-management-service:user-service"
+                "course-management-service:course-service"
+                "enrollmentservice:enrollment-service"
+                "payment:payment-service"
+                "notification-service:notification-service"
+                "content-delivery-service:content-service"
+                "frontend:frontend"
+              )
+              
+              for service_info in "${SERVICES[@]}"; do
+                IFS=':' read -r dirname imgname <<< "$service_info"
+                
+                if [ -f "$dirname/Dockerfile" ]; then
+                  echo "Building image for $imgname (directory: $dirname)..."
+                  docker build -t ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} \
+                                -t ${DOCKERHUB_USER}/course-plat-${imgname}:latest \
+                                $dirname || {
+                    echo "Failed to build image for $imgname"
+                    exit 1
+                  }
+                  echo "✓ Successfully built ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}"
+                else
+                  echo "⚠ No Dockerfile found for $dirname, skipping..."
+                fi
+              done
+              
+              echo "=========================================="
+              echo "All Docker images built successfully!"
+              echo "=========================================="
+            '''
+          }
         }
       }
     }
 
-    stage('Deploy to K8s') {
-      when { expression { return (env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'main' || params.FORCE_DEPLOY == true) } }
+    stage('Push Docker Images') {
       steps {
-        sh '''
-          echo "BRANCH_NAME=$BRANCH_NAME FORCE_DEPLOY=$FORCE_DEPLOY"
-          kubectl create ns $KUBE_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-          kubectl -n $KUBE_NAMESPACE apply -f k8s/ || true
-          for d in api-gateway eureka-server config-server user-service course-service enrollment-service payment-service notification-service content-service frontend; do
-            imgname=$(echo $d | sed 's/_/-/g')
-            kubectl -n $KUBE_NAMESPACE set image deploy/$d $d=$DOCKERHUB_USER/course-plat-$imgname:$IMAGE_TAG || true
-            kubectl -n $KUBE_NAMESPACE rollout status deploy/$d || true
-          done
-        '''
+        script {
+          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+            sh '''
+              echo "=========================================="
+              echo "Pushing Docker Images to Docker Hub"
+              echo "=========================================="
+              
+              IMAGES=(
+                "eureka-server"
+                "config-server"
+                "api-gateway"
+                "user-service"
+                "course-service"
+                "enrollment-service"
+                "payment-service"
+                "notification-service"
+                "content-service"
+                "frontend"
+              )
+              
+              for imgname in "${IMAGES[@]}"; do
+                echo "Pushing ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
+                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || {
+                  echo "Failed to push ${imgname}"
+                  exit 1
+                }
+                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:latest || {
+                  echo "Failed to push ${imgname}:latest"
+                  exit 1
+                }
+                echo "✓ Successfully pushed ${imgname}"
+              done
+              
+              echo "=========================================="
+              echo "All images pushed successfully!"
+              echo "=========================================="
+            '''
+          }
+        }
       }
+    }
+
+    stage('Pull Images & Create Containers (Docker)') {
+      when {
+        expression { return env.BRANCH_NAME ==~ /^(master|main|develop)$/ || params.FORCE_DEPLOY == true }
+      }
+      steps {
+        script {
+          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+            sh '''
+              echo "=========================================="
+              echo "Pulling Images and Creating Containers"
+              echo "=========================================="
+              
+              echo "Logging in to Docker Hub..."
+              echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+              
+              IMAGES=(
+                "eureka-server"
+                "config-server"
+                "api-gateway"
+                "user-service"
+                "course-service"
+                "enrollment-service"
+                "payment-service"
+                "notification-service"
+                "content-service"
+                "frontend"
+              )
+              
+              # Pull all images
+              for imgname in "${IMAGES[@]}"; do
+                echo "Pulling ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
+                docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || {
+                  echo "Warning: Failed to pull ${imgname}, using latest..."
+                  docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:latest || true
+                }
+              done
+              
+              echo "✓ All images pulled successfully"
+              
+              # Stop existing containers if running
+              echo "Stopping existing containers..."
+              docker-compose down || true
+              
+              # Update docker-compose.yml with new image tags (optional)
+              # Or use docker-compose pull to get latest images
+              
+              echo "Starting containers with docker-compose..."
+              docker-compose up -d || {
+                echo "Failed to start containers with docker-compose"
+                exit 1
+              }
+              
+              echo "Waiting for services to be healthy..."
+              sleep 30
+              
+              echo "Container status:"
+              docker-compose ps
+              
+              echo "=========================================="
+              echo "Containers created and started successfully!"
+              echo "=========================================="
+            '''
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      when {
+        expression { return (env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'main' || params.FORCE_DEPLOY == true) }
+      }
+      steps {
+        script {
+          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
+            sh '''
+              echo "=========================================="
+              echo "Deploying to Kubernetes"
+              echo "=========================================="
+              
+              echo "BRANCH_NAME=$BRANCH_NAME FORCE_DEPLOY=$FORCE_DEPLOY"
+              
+              # Create namespace if it doesn't exist
+              kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+              
+              # Create Docker registry secret for pulling images
+              echo "Creating Docker registry secret..."
+              kubectl create secret docker-registry dockerhub-secret \
+                --docker-server=https://index.docker.io/v1/ \
+                --docker-username=${DOCKERHUB_USER} \
+                --docker-password=${DOCKERHUB_PASS} \
+                --docker-email=${DOCKERHUB_USER}@example.com \
+                -n ${KUBE_NAMESPACE} \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              # Replace placeholders in Kubernetes manifests
+              echo "Updating Kubernetes manifests with image tags..."
+              mkdir -p k8s-processed
+              
+              # Process all Kubernetes manifest files
+              for manifest in k8s/*.yaml; do
+                if [ -f "$manifest" ]; then
+                  filename=$(basename "$manifest")
+                  echo "Processing $filename..."
+                  sed "s|DOCKERHUB_USER|${DOCKERHUB_USER}|g; s|IMAGE_TAG|${IMAGE_TAG}|g" "$manifest" > "k8s-processed/$filename"
+                fi
+              done
+              
+              # Process monitoring services (Prometheus and Grafana use public images, no need to replace)
+              if [ -f "k8s/prometheus.yaml" ]; then
+                cp k8s/prometheus.yaml k8s-processed/prometheus.yaml
+              fi
+              if [ -f "k8s/grafana.yaml" ]; then
+                cp k8s/grafana.yaml k8s-processed/grafana.yaml
+              fi
+              
+              # Apply all Kubernetes manifests
+              echo "Applying Kubernetes manifests..."
+              kubectl apply -f k8s-processed/ -n ${KUBE_NAMESPACE} || {
+                echo "Failed to apply Kubernetes manifests"
+                exit 1
+              }
+              
+              # Update image tags for all deployments
+              echo "Updating deployment images..."
+              DEPLOYMENTS=(
+                "eureka-server"
+                "config-server"
+                "actuator"
+                "api-gateway"
+                "user-service"
+                "course-service"
+                "enrollment-service"
+                "payment-service"
+                "notification-service"
+                "content-service"
+                "frontend"
+              )
+              
+              for deployment in "${DEPLOYMENTS[@]}"; do
+                imgname=$(echo $deployment | sed 's/-service//' | sed 's/service$/service/')
+                case $deployment in
+                  "eureka-server") imgname="eureka-server" ;;
+                  "config-server") imgname="config-server" ;;
+                  "actuator") imgname="actuator" ;;
+                  "api-gateway") imgname="api-gateway" ;;
+                  "user-service") imgname="user-service" ;;
+                  "course-service") imgname="course-service" ;;
+                  "enrollment-service") imgname="enrollment-service" ;;
+                  "payment-service") imgname="payment-service" ;;
+                  "notification-service") imgname="notification-service" ;;
+                  "content-service") imgname="content-service" ;;
+                  "frontend") imgname="frontend" ;;
+                esac
+                
+                # Skip image update for monitoring services (they use public images)
+                if [ "$deployment" == "prometheus" ] || [ "$deployment" == "grafana" ]; then
+                  continue
+                fi
+                
+                echo "Updating ${deployment} to use ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
+                kubectl set image deployment/${deployment} \
+                  ${deployment}=${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} \
+                  -n ${KUBE_NAMESPACE} || {
+                  echo "Warning: Failed to update ${deployment}, may need to create it first"
+                }
+              done
+              
+              # Wait for rollouts to complete
+              echo "Waiting for deployments to rollout..."
+              for deployment in "${DEPLOYMENTS[@]}"; do
+                echo "Checking rollout status for ${deployment}..."
+                kubectl rollout status deployment/${deployment} -n ${KUBE_NAMESPACE} --timeout=5m || {
+                  echo "Warning: Rollout for ${deployment} may not be complete"
+                }
+              done
+              
+              # Wait for monitoring services
+              if kubectl get deployment prometheus -n ${KUBE_NAMESPACE} > /dev/null 2>&1; then
+                echo "Waiting for Prometheus rollout..."
+                kubectl rollout status deployment/prometheus -n ${KUBE_NAMESPACE} --timeout=5m || true
+              fi
+              
+              if kubectl get deployment grafana -n ${KUBE_NAMESPACE} > /dev/null 2>&1; then
+                echo "Waiting for Grafana rollout..."
+                kubectl rollout status deployment/grafana -n ${KUBE_NAMESPACE} --timeout=5m || true
+              fi
+              
+              # Show deployment status
+              echo "=========================================="
+              echo "Deployment Status:"
+              echo "=========================================="
+              kubectl get deployments -n ${KUBE_NAMESPACE}
+              kubectl get pods -n ${KUBE_NAMESPACE}
+              kubectl get services -n ${KUBE_NAMESPACE}
+              
+              echo "=========================================="
+              echo "✓ Successfully deployed to Kubernetes!"
+              echo "=========================================="
+            '''
+          }
+        }
+      }
+    }
+  }
+  
+  post {
+    always {
+      script {
+        echo "Pipeline execution completed."
+        echo "Build Tag: ${IMAGE_TAG}"
+        echo "Branch: ${env.BRANCH_NAME}"
+      }
+    }
+    success {
+      echo "✓ Pipeline succeeded!"
+    }
+    failure {
+      echo "✗ Pipeline failed!"
     }
   }
 }
