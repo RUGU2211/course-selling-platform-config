@@ -51,7 +51,7 @@ pipeline {
           sh '''
             set -e
             echo "Finding all module pom.xml files..."
-            POMS=$(find "$PWD" -mindepth 2 -maxdepth 2 -name pom.xml | grep -v actuator | sort)
+            POMS=$(find "$PWD" -mindepth 2 -maxdepth 2 -name pom.xml | sort)
             if [ -z "$POMS" ]; then 
               echo "No pom.xml found"; 
               exit 1; 
@@ -68,7 +68,7 @@ pipeline {
               
               if [ "$SKIP_TESTS" != "true" ]; then
                 echo "Running tests for $modname..."
-                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false -Dspring.datasource.url=jdbc:h2:mem:test test) || {
+                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false -Dspring.datasource.url=jdbc:h2:mem:test -Dspring.datasource.driver-class-name=org.h2.Driver test) || {
                   echo "Tests failed for $modname, but continuing..."
                 }
               fi
