@@ -194,12 +194,48 @@ pipeline {
               echo "Pushing Docker Images to Docker Hub"
               echo "=========================================="
               
-              # Push all images
+              # Function to push with retry
+              push_with_retry() {
+                local image=$1
+                local tag=$2
+                local max_attempts=3
+                local attempt=1
+                
+                while [ $attempt -le $max_attempts ]; do
+                  echo "Attempt $attempt/$max_attempts: Pushing ${image}:${tag}..."
+                  if docker push ${image}:${tag}; then
+                    echo "✓ Successfully pushed ${image}:${tag}"
+                    return 0
+                  else
+                    if [ $attempt -lt $max_attempts ]; then
+                      echo "⚠ Push failed for ${image}:${tag}, retrying in 5 seconds..."
+                      sleep 5
+                    else
+                      echo "✗ Failed to push ${image}:${tag} after $max_attempts attempts"
+                      return 1
+                    fi
+                  fi
+                  attempt=$((attempt + 1))
+                done
+              }
+              
+              # Push all images with retry
               for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
-                echo "Pushing ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
-                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || exit 1
-                docker push ${DOCKERHUB_USER}/course-plat-${imgname}:latest || exit 1
-                echo "✓ Successfully pushed ${imgname}"
+                echo "Pushing ${imgname}..."
+                
+                # Push with commit tag
+                if ! push_with_retry "${DOCKERHUB_USER}/course-plat-${imgname}" "${IMAGE_TAG}"; then
+                  echo "Failed to push ${imgname}:${IMAGE_TAG}"
+                  exit 1
+                fi
+                
+                # Push latest tag
+                if ! push_with_retry "${DOCKERHUB_USER}/course-plat-${imgname}" "latest"; then
+                  echo "Failed to push ${imgname}:latest"
+                  exit 1
+                fi
+                
+                echo "✓ Successfully pushed all tags for ${imgname}"
               done
               
               echo "=========================================="
