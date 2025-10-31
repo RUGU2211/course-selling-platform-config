@@ -2,10 +2,20 @@ pipeline {
   agent any
   
   triggers {
-    // Trigger on push to any branch
-    // Note: For GitHub, configure webhook in GitHub repo settings:
-    // Settings -> Webhooks -> Add webhook -> Payload URL: http://jenkins-url/github-webhook/
-    pollSCM('H/5 * * * *') // Poll every 5 minutes (alternative to webhook)
+    // Multiple trigger options for reliability:
+    // 1. SCM Polling - Checks every 1 minute for changes
+    pollSCM('* * * * *') // Poll every minute
+    
+    // 2. Webhook Support (configure in Jenkins job):
+    //    - Go to Jenkins -> Your Job -> Configure
+    //    - Check "Build Triggers" -> "GitHub hook trigger for GITScm polling"
+    //    - Or "Poll SCM" with schedule: * * * * *
+    
+    // 3. For GitHub webhook (recommended):
+    //    GitHub Repo -> Settings -> Webhooks -> Add webhook
+    //    Payload URL: http://your-jenkins-url/github-webhook/
+    //    Content type: application/json
+    //    Events: Just the push event
   }
   
   environment { 
