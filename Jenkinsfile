@@ -23,7 +23,7 @@ pipeline {
   }
   
   parameters {
-    booleanParam(name: 'FORCE_DEPLOY', defaultValue: false, description: 'Deploy to Kubernetes regardless of branch')
+    booleanParam(name: 'FORCE_DEPLOY', defaultValue: true, description: 'Deploy to Kubernetes regardless of branch')
     booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip unit tests')
   }
   
@@ -40,6 +40,10 @@ pipeline {
           env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
           env.IMAGE_TAG = env.GIT_COMMIT
           env.BUILD_DATE = sh(returnStdout: true, script: 'date +%Y%m%d-%H%M%S').trim()
+          // Set BRANCH_NAME if not already set
+          if (!env.BRANCH_NAME) {
+            env.BRANCH_NAME = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD || echo ""').trim()
+          }
         }
       }
     }
@@ -68,7 +72,7 @@ pipeline {
               
               if [ "$SKIP_TESTS" != "true" ]; then
                 echo "Running tests for $modname..."
-                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false -Dspring.datasource.url=jdbc:h2:mem:test -Dspring.datasource.driver-class-name=org.h2.Driver test) || {
+                (cd "$moddir" && ./mvnw -q -DskipITs -Dspring.profiles.active=test -Dspring.cloud.config.enabled=false -Deureka.client.enabled=false test) || {
                   echo "Tests failed for $modname, but continuing..."
                 }
               fi
@@ -209,7 +213,7 @@ pipeline {
 
     stage('Pull Images & Create Containers (Docker)') {
       when {
-        expression { return env.BRANCH_NAME ==~ /^(master|main|develop)$/ || params.FORCE_DEPLOY == true }
+        expression { return params.FORCE_DEPLOY == true }
       }
       steps {
         script {
@@ -263,7 +267,7 @@ pipeline {
 
     stage('Deploy to Kubernetes') {
       when {
-        expression { return (env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'main' || params.FORCE_DEPLOY == true) }
+        expression { return params.FORCE_DEPLOY == true }
       }
       steps {
         script {
