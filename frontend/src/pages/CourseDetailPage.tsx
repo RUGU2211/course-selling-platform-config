@@ -1,8 +1,10 @@
 import React from 'react';
-import { Box, Typography, Container, Button, Card, CardContent, Rating, Stack, Link as MuiLink, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material';
+import { Box, Typography, Container, Button, Card, CardContent, Rating, Stack, Link as MuiLink, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert, MenuItem, Select, FormControl, InputLabel, IconButton } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseById, fetchCourseRatingSummary, fetchContentByCourse, logContentAccess, fetchCourseReviews, createReview, enrollInCourse, getStudentEnrollments, ContentItem } from '../services/api';
+import { fetchCourseById, fetchCourseRatingSummary, fetchContentByCourse, logContentAccess, fetchCourseReviews, createReview, enrollInCourse, getStudentEnrollments, ContentItem, addContentItem } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 
 const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +25,14 @@ const CourseDetailPage: React.FC = () => {
   const [showReviewDialog, setShowReviewDialog] = React.useState(false);
   const [reviewRating, setReviewRating] = React.useState<number>(5);
   const [reviewComment, setReviewComment] = React.useState<string>('');
+  
+  // Content management state
+  const [showAddContentDialog, setShowAddContentDialog] = React.useState(false);
+  const [newContent, setNewContent] = React.useState({
+    title: '',
+    url: '',
+    type: 'VIDEO' as 'VIDEO' | 'PDF' | 'DOC' | 'IMAGE'
+  });
 
   React.useEffect(() => {
     let mounted = true;
@@ -182,6 +192,29 @@ const CourseDetailPage: React.FC = () => {
     }
   };
 
+  const handleAddContent = async () => {
+    if (!newContent.title || !newContent.url) {
+      return;
+    }
+    try {
+      await addContentItem({
+        courseId: courseId,
+        type: newContent.type,
+        title: newContent.title,
+        url: newContent.url
+      });
+      // Refresh content list
+      const list = await fetchContentByCourse(courseId);
+      setContents(list || []);
+      setShowAddContentDialog(false);
+      setNewContent({ title: '', url: '', type: 'VIDEO' });
+    } catch (e) {
+      console.error('Failed to add content:', e);
+    }
+  };
+
+  const isInstructor = user?.role === 'INSTRUCTOR' && course?.instructorId && Number(user.id) === course.instructorId;
+
   if (!course) return null;
 
   return (
@@ -225,9 +258,21 @@ const CourseDetailPage: React.FC = () => {
                 </Typography>
               )}
 
-              <Typography variant="h5" sx={{ mt: 3, mb: 2 }}>
-                Course Content
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5" sx={{ mt: 3 }}>
+                  Course Content
+                </Typography>
+                {isInstructor && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => setShowAddContentDialog(true)}
+                  >
+                    Add Content
+                  </Button>
+                )}
+              </Box>
 
               {contentLoading && (
                 <Typography variant="body2" color="text.secondary">Loading content...</Typography>
@@ -249,8 +294,13 @@ const CourseDetailPage: React.FC = () => {
                             <MuiLink component="button" variant="body1" onClick={() => handleOpenContent(item)}>
                               {item.title}
                             </MuiLink>
-                            {!isEnrolled && (
+                            {!isEnrolled && !isInstructor && (
                               <Chip label="Enroll to Access" size="small" color="warning" />
+                            )}
+                            {isInstructor && (
+                              <IconButton size="small" color="error">
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
                             )}
                           </Stack>
                         </li>
@@ -360,6 +410,47 @@ const CourseDetailPage: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setShowReviewDialog(false)}>Cancel</Button>
           <Button onClick={handleSubmitReview} variant="contained">Submit</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Content Dialog */}
+      <Dialog open={showAddContentDialog} onClose={() => setShowAddContentDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Course Content</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Content Title"
+              fullWidth
+              value={newContent.title}
+              onChange={(e) => setNewContent({ ...newContent, title: e.target.value })}
+              placeholder="e.g., Introduction to Java Programming"
+            />
+            <TextField
+              label="Content URL"
+              fullWidth
+              value={newContent.url}
+              onChange={(e) => setNewContent({ ...newContent, url: e.target.value })}
+              placeholder="https://example.com/video.mp4"
+              helperText="URL to the content (video, PDF, etc.)"
+            />
+            <FormControl fullWidth>
+              <InputLabel>Content Type</InputLabel>
+              <Select
+                value={newContent.type}
+                label="Content Type"
+                onChange={(e) => setNewContent({ ...newContent, type: e.target.value as any })}
+              >
+                <MenuItem value="VIDEO">Video</MenuItem>
+                <MenuItem value="PDF">PDF Document</MenuItem>
+                <MenuItem value="DOC">Document</MenuItem>
+                <MenuItem value="IMAGE">Image</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAddContentDialog(false)}>Cancel</Button>
+          <Button onClick={handleAddContent} variant="contained">Add Content</Button>
         </DialogActions>
       </Dialog>
     </Container>
