@@ -147,64 +147,6 @@ services:
       retries: 10
       start_period: 420s
 
-  # Notification Service
-  notification-service:
-    build: ./notification-service
-    container_name: course-platform-notification-service
-    ports:
-      - "8085:8085"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-    networks:
-      - microservices-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/notification_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 420s
-
-  # Payment Service
-  payment-service:
-    build: ./payment
-    container_name: course-platform-payment-service
-    ports:
-      - "8086:8086"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-    networks:
-      - microservices-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://course-platform-mysql:3306/payment_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 420s
-
   # Content Delivery Service
   content-service:
     build: ./content-delivery-service
@@ -246,10 +188,6 @@ services:
       course-service:
         condition: service_healthy
       enrollment-service:
-        condition: service_healthy
-      notification-service:
-        condition: service_healthy
-      payment-service:
         condition: service_healthy
       content-service:
         condition: service_healthy

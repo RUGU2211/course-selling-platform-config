@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Container, Card, CardContent, Button, LinearProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getStudentEnrollments, fetchCourseById, getPaymentHistory } from '../services/api';
+import { getStudentEnrollments, fetchCourseById } from '../services/api';
 
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -34,10 +34,8 @@ const StudentDashboard: React.FC = () => {
         if (!mounted) return;
         setCourses(courseData.filter(Boolean));
         
-        // Calculate total spent
-        const payments = await getPaymentHistory(Number(user.id));
-        const spent = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-        setTotalSpent(spent);
+        // Set total spent to 0 (payment service removed)
+        setTotalSpent(0);
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
       } finally {
@@ -58,9 +56,7 @@ const StudentDashboard: React.FC = () => {
         const coursePromises = enrolls.map((e: any) => fetchCourseById(e.courseId).catch(() => null));
         const courseData = await Promise.all(coursePromises);
         setCourses(courseData.filter(Boolean));
-        const payments = await getPaymentHistory(Number(user.id));
-        const spent = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-        setTotalSpent(spent);
+        setTotalSpent(0);
       } catch {}
     };
     const id = window.setInterval(tick, 20000);
@@ -132,9 +128,6 @@ const StudentDashboard: React.FC = () => {
               )}
               <Button variant="contained" sx={{ mt: 2 }} component={Link} to="/courses">
                 Browse Courses
-              </Button>
-              <Button variant="text" sx={{ mt: 1, ml: 2 }} component={Link} to="/student/payments">
-                View Payments
               </Button>
             </CardContent>
           </Card>

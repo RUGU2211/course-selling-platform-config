@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import CoursesPage from './pages/CoursesPage';
@@ -16,8 +15,6 @@ import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import CheckoutPage from './pages/CheckoutPage';
 import InstructorCreateCoursePage from './pages/InstructorCreateCoursePage';
-import StudentPaymentsPage from './pages/StudentPaymentsPage';
-import NotificationsPage from './pages/NotificationsPage';
 
 // Create theme
 const theme = createTheme({
@@ -63,8 +60,7 @@ const App: React.FC = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
-          <NotificationProvider>
-            <Router>
+          <Router>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<LoginPage />} />
@@ -73,21 +69,11 @@ const App: React.FC = () => {
                 {/* Routes with Layout */}
                 <Route path="/" element={<Layout />}>
                   <Route index element={<HomePage />} />
-                  <Route path="courses" element={<CoursesPage />} />
-                  <Route path="courses/:id" element={<CourseDetailPage />} />
-                  <Route path="checkout/:id" element={<CheckoutPage />} />
-                  <Route path="notifications" element={<NotificationsPage />} />
-
-                  <Route
-                     path="student/payments"
-                     element={
-                       <ProtectedRoute>
-                         <StudentPaymentsPage />
-                       </ProtectedRoute>
-                     }
-                   />
-                  
-                  {/* Student Dashboard */}
+                <Route path="courses" element={<CoursesPage />} />
+                <Route path="courses/:id" element={<CourseDetailPage />} />
+                <Route path="checkout/:id" element={<CheckoutPage />} />
+                
+                {/* Student Dashboard */}
                   <Route
                     path="dashboard"
                     element={
@@ -126,7 +112,6 @@ const App: React.FC = () => {
                 </Route>
               </Routes>
             </Router>
-          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

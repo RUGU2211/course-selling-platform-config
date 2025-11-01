@@ -3,13 +3,11 @@ import { Box, Typography, Container, Button, Card, CardContent, Rating, Stack, L
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchCourseById, fetchCourseRatingSummary, fetchContentByCourse, logContentAccess, fetchCourseReviews, createReview, enrollInCourse, getStudentEnrollments, ContentItem } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../contexts/NotificationContext';
 
 const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { pushPopup } = useNotifications();
   
   const courseId = parseInt(id || '1');
   const [course, setCourse] = React.useState<any | null>(null);
@@ -117,32 +115,29 @@ const CourseDetailPage: React.FC = () => {
     try {
       // Check if already enrolled
       if (isEnrolled) {
-        pushPopup('Already Enrolled', 'You are already enrolled in this course.');
         navigate('/dashboard');
         return;
       }
       
       // Navigate to checkout if payment required
       if (course && course.price > 0) {
-    navigate(`/checkout/${courseId}`);
+        navigate(`/checkout/${courseId}`);
       } else {
         // Free course - enroll directly
         await enrollInCourse({
           studentId: Number(user.id),
           courseId: courseId
         });
-        pushPopup('Enrollment Successful', 'You have been enrolled in this course.');
         setIsEnrolled(true);
         navigate('/dashboard');
       }
     } catch (error: any) {
-      pushPopup('Enrollment Failed', error?.message || 'Failed to enroll in course.');
+      // Enrollment failed
     }
   };
 
   const handleSubmitReview = async () => {
     if (!user) {
-      pushPopup('Login Required', 'Please login to submit a review.');
       return;
     }
     
@@ -164,15 +159,13 @@ const CourseDetailPage: React.FC = () => {
       setShowReviewDialog(false);
       setReviewComment('');
       setReviewRating(5);
-      pushPopup('Review Submitted', 'Your review has been submitted successfully.');
     } catch (error: any) {
-      pushPopup('Review Failed', error?.message || 'Failed to submit review.');
+      // Review submission failed
     }
   };
 
   const handleOpenContent = async (item: ContentItem) => {
     if (!user || !isEnrolled) {
-      pushPopup('Access Denied', 'Please enroll in this course to access content.');
       return;
     }
     

@@ -142,8 +142,6 @@ pipeline {
               build_image "user-service" "user-management-service"
               build_image "course-service" "course-management-service"
               build_image "enrollment-service" "enrollmentservice"
-              build_image "payment-service" "payment"
-              build_image "notification-service" "notification-service"
               build_image "content-service" "content-delivery-service"
               build_image "frontend" "frontend"
               
@@ -200,7 +198,7 @@ pipeline {
               }
               
               # Push all images with retry (continuing on individual failures)
-              for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
+              for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service content-service frontend; do
                 echo "Pushing ${imgname}..."
                 
                 # Push with commit tag
@@ -249,7 +247,7 @@ pipeline {
               echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin || true
               
               # Pull all images (continuing on failures)
-              for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
+              for imgname in eureka-server config-server actuator api-gateway user-service course-service enrollment-service content-service frontend; do
                 echo "Pulling ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG}..."
                 docker pull ${DOCKERHUB_USER}/course-plat-${imgname}:${IMAGE_TAG} || {
                   echo "⚠ Failed to pull ${imgname}:${IMAGE_TAG}, trying latest..."
@@ -352,7 +350,7 @@ pipeline {
               # Update image tags for all deployments (continuing on failures)
               echo "Updating deployment images..."
               
-              for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
+              for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service content-service frontend; do
                 imgname=$(echo $deployment | sed 's/-service//' | sed 's/service$/service/')
                 case $deployment in
                   "eureka-server") imgname="eureka-server" ;;
@@ -362,8 +360,6 @@ pipeline {
                   "user-service") imgname="user-service" ;;
                   "course-service") imgname="course-service" ;;
                   "enrollment-service") imgname="enrollment-service" ;;
-                  "payment-service") imgname="payment-service" ;;
-                  "notification-service") imgname="notification-service" ;;
                   "content-service") imgname="content-service" ;;
                   "frontend") imgname="frontend" ;;
                 esac
@@ -383,7 +379,7 @@ pipeline {
               
               # Wait for rollouts to complete (with shorter timeout, continuing on failures)
               echo "Waiting for deployments to rollout..."
-              for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service payment-service notification-service content-service frontend; do
+              for deployment in eureka-server config-server actuator api-gateway user-service course-service enrollment-service content-service frontend; do
                 echo "Checking rollout status for ${deployment}..."
                 kubectl rollout status deployment/${deployment} -n ${KUBE_NAMESPACE} --timeout=2m 2>&1 || {
                   echo "⚠ Rollout for ${deployment} may not be complete or deployment doesn't exist, continuing..."

@@ -63,11 +63,6 @@ const Header: React.FC<HeaderProps> = ({ handleDrawerToggle }) => {
                     borderBottom: isActive('/dashboard', true) ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
                     borderRadius: 0
                   }}>Dashboard</Button>
-                  <Button color="inherit" component={Link} to="/student/payments" sx={{
-                    opacity: isActive('/student/payments') ? 1 : 0.85,
-                    borderBottom: isActive('/student/payments', true) ? '2px solid rgba(255,255,255,0.9)' : '2px solid transparent',
-                    borderRadius: 0
-                  }}>Payments</Button>
                 </>
               )}
               {user.role === 'INSTRUCTOR' && (
@@ -90,7 +85,6 @@ const Header: React.FC<HeaderProps> = ({ handleDrawerToggle }) => {
               <Menu anchorEl={actionsEl} open={actionsOpen} onClose={handleActionsClose} transformOrigin={{ horizontal: 'right', vertical: 'top' }} anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}>
                 {user.role === 'STUDENT'
                   ? [
-                      <MenuItem key="payments" onClick={() => { handleActionsClose(); navigate('/student/payments'); }}>View Payments</MenuItem>,
                       <MenuItem key="browse" onClick={() => { handleActionsClose(); navigate('/courses'); }}>Browse Courses</MenuItem>,
                     ]
                   : user.role === 'INSTRUCTOR'

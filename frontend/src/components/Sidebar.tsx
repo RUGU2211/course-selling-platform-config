@@ -27,20 +27,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, handleDrawerToggle }) => {
         <ListItemButton component={Link} to="/courses" selected={isActive('/courses')}>
           <ListItemText primary="Courses" />
         </ListItemButton>
-        {isAuthenticated && (
-          <ListItemButton component={Link} to="/notifications" selected={isActive('/notifications', true)}>
-            <ListItemText primary="Notifications" />
-          </ListItemButton>
-        )}
         {isAuthenticated && user && (
           <>
             {user.role === 'STUDENT' && (
               <>
                 <ListItemButton component={Link} to="/dashboard" selected={isActive('/dashboard', true)}>
                   <ListItemText primary="Student Dashboard" />
-                </ListItemButton>
-                <ListItemButton component={Link} to="/student/payments" selected={isActive('/student/payments', true)}>
-                  <ListItemText primary="Payments" />
                 </ListItemButton>
               </>
             )}

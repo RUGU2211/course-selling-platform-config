@@ -3,12 +3,10 @@ import { Container, Card, CardContent, Typography, TextField, Button, Stack } fr
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { createCourse } from '../services/api';
-import { useNotifications } from '../contexts/NotificationContext';
 
 const InstructorCreateCoursePage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { pushPopup } = useNotifications();
 
   const [form, setForm] = React.useState({
     title: '',
@@ -49,7 +47,6 @@ const InstructorCreateCoursePage: React.FC = () => {
         categoryId: Number.isNaN(categoryIdNum) ? undefined : categoryIdNum,
       });
       setSuccess('Course created successfully!');
-      pushPopup('Course Created', `Your course "${form.title}" has been created.`);
       setTimeout(() => navigate('/instructor/dashboard'), 800);
     } catch (e) {
       setError(String((e as Error).message || e));

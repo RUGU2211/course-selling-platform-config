@@ -2,15 +2,13 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Card, CardContent, Typography, Box, TextField, Button, Stack, Alert, Paper, Divider } from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
-import { fetchCourseById, processPaymentWorkflow } from '../services/api';
+import { fetchCourseById } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../contexts/NotificationContext';
 
 const CheckoutPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
-  const { pushPopup } = useNotifications();
   const courseId = parseInt(id || '0');
 
   const [course, setCourse] = React.useState<any | null>(null);
@@ -53,40 +51,13 @@ const CheckoutPage: React.FC = () => {
     }
     setLoading(true);
     try {
+      // Simulate payment processing
       const uid = Number(user.id) || 0;
       const amount = Number(course?.price || 0);
-      const res = await processPaymentWorkflow(uid, courseId, amount);
       
-      if (res && (res.status === 'success' || res.payment)) {
-        // Show success notification
-        pushPopup('Payment Successful', `Your payment of $${amount.toFixed(2)} was processed successfully.`);
-        
-        // Generate receipt
-        const receiptData = {
-          orderId: res.payment?.transactionId || `TXN_${Date.now()}`,
-          userId: uid,
-          courseId: courseId,
-          courseTitle: course?.title,
-          amount: amount,
-          status: 'COMPLETED',
-          transactionId: res.payment?.transactionId || `TXN_${Date.now()}`,
-          date: new Date().toISOString(),
-          paymentMethod: 'Credit Card'
-        };
-        setReceipt(receiptData);
-        setPaymentComplete(true);
-        
-        // Redirect after delay
-        setTimeout(() => navigate('/dashboard'), 3000);
-      } else {
-        setError(res?.message || 'Payment failed. Please try again.');
-      }
-    } catch (e: any) {
-      // Static fallback for payment only (as requested)
-      const amount = Number(course?.price || 0);
       const receiptData = {
         orderId: `TXN_${Date.now()}`,
-        userId: Number(user?.id) || 0,
+        userId: uid,
         courseId: courseId,
         courseTitle: course?.title,
         amount: amount,
@@ -95,11 +66,14 @@ const CheckoutPage: React.FC = () => {
         date: new Date().toISOString(),
         paymentMethod: 'Credit Card'
       };
+      
       setReceipt(receiptData);
       setPaymentComplete(true);
-      pushPopup('Payment Simulated', `Your payment of $${amount.toFixed(2)} has been recorded.`);
+      
       // Redirect after delay
       setTimeout(() => navigate('/dashboard'), 3000);
+    } catch (e: any) {
+      setError('Payment processing failed. Please try again.');
     }
     setLoading(false);
   };
@@ -166,8 +140,8 @@ const CheckoutPage: React.FC = () => {
                 </Stack>
               </Paper>
               
-              <Button variant="contained" onClick={() => navigate('/student/payments')}>
-                View Payment History
+              <Button variant="contained" onClick={() => navigate('/dashboard')}>
+                Go to Dashboard
               </Button>
             </Stack>
           </CardContent>

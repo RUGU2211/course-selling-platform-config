@@ -1,7 +1,6 @@
 package com.example.enrollmentservice.controller;
 
 import com.example.enrollmentservice.client.CourseServiceClient;
-import com.example.enrollmentservice.client.PaymentServiceClient;
 import com.example.enrollmentservice.client.UserServiceClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +20,6 @@ public class EnrollmentWorkflowController {
     @Autowired
     private CourseServiceClient courseServiceClient;
 
-    @Autowired
-    private PaymentServiceClient paymentServiceClient;
-
     @PostMapping("/workflow/enroll")
     public ResponseEntity<Map<String, Object>> enrollWithValidation(
             @RequestParam Long studentId,
@@ -40,11 +36,7 @@ public class EnrollmentWorkflowController {
             Object course = courseServiceClient.getCourseById(courseId);
             response.put("course", course);
             
-            // Step 3: Check if student has valid payment
-            Object payments = paymentServiceClient.getUserPayments(studentId);
-            response.put("payments", payments);
-            
-            // Step 4: Create enrollment (this would be the actual enrollment logic)
+            // Step 3: Create enrollment
             Map<String, Object> enrollment = new HashMap<>();
             enrollment.put("studentId", studentId);
             enrollment.put("courseId", courseId);
@@ -71,10 +63,6 @@ public class EnrollmentWorkflowController {
             // Get student profile
             Object student = userServiceClient.getUserProfile(studentId);
             summary.put("student", student);
-            
-            // Get student's payments
-            Object payments = paymentServiceClient.getUserPayments(studentId);
-            summary.put("payments", payments);
             
             summary.put("status", "success");
             summary.put("message", "Student enrollment summary retrieved successfully");

@@ -161,23 +161,6 @@ export async function updateEnrollmentProgress(enrollmentId: number, progress: {
   });
 }
 
-// Payments
-export async function processPaymentWorkflow(userId: number, courseId: number, amount: number): Promise<any> {
-  const params = new URLSearchParams({ userId: String(userId), courseId: String(courseId), amount: String(amount) });
-  return apiFetch<any>(`/payment-service/api/payments/workflow/process?${params.toString()}`, { method: 'POST' });
-}
-
-export async function getPaymentHistory(userId: number): Promise<any[]> {
-  return apiFetch<any[]>(`/payment-service/api/payments/orders/${userId}`);
-}
-
-export async function createPaymentOrder(order: { userId: number; courseId: number; amount: number; paymentMethod: string }): Promise<any> {
-  return apiFetch<any>(`/payment-service/api/payments/process`, {
-    method: 'POST',
-    body: JSON.stringify(order),
-  });
-}
-
 // Content Service
 export type ContentItem = {
   contentId: number;
@@ -204,29 +187,5 @@ export async function logContentAccess(userId: number, contentId: number, action
   await apiFetch<void>(`/content-delivery-service/api/logs`, {
     method: 'POST',
     body: JSON.stringify({ userId, content: { contentId }, action }),
-  });
-}
-
-// Notifications
-export async function sendNotification(notification: { userId: number; title: string; message: string; type?: string }): Promise<any> {
-  return apiFetch<any>(`/notification-service/api/notifications/send`, {
-    method: 'POST',
-    body: JSON.stringify(notification),
-  });
-}
-
-export async function getUserNotifications(userId: number): Promise<any[]> {
-  return apiFetch<any[]>(`/notification-service/api/notifications/user/${userId}`);
-}
-
-export async function markNotificationRead(notificationId: number): Promise<void> {
-  await apiFetch<void>(`/notification-service/api/notifications/${notificationId}/read`, {
-    method: 'PUT',
-  });
-}
-
-export async function deleteNotification(notificationId: number): Promise<void> {
-  await apiFetch<void>(`/notification-service/api/notifications/${notificationId}`, {
-    method: 'DELETE',
   });
 }

@@ -30,8 +30,6 @@ data:
     CREATE DATABASE IF NOT EXISTS users_db;
     CREATE DATABASE IF NOT EXISTS courses_db;
     CREATE DATABASE IF NOT EXISTS enrollment_db;
-    CREATE DATABASE IF NOT EXISTS payment_db;
-    CREATE DATABASE IF NOT EXISTS notification_db;
     CREATE DATABASE IF NOT EXISTS content_db;
 ---
 apiVersion: apps/v1

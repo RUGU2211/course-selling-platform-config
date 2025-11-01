@@ -123,38 +123,6 @@ data:
             regex: metrics
         metrics_path: /actuator/prometheus
 
-      # Payment Service
-      - job_name: 'payment-service'
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - course-plat
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name]
-            action: keep
-            regex: payment-service
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            action: keep
-            regex: metrics
-        metrics_path: /actuator/prometheus
-
-      # Notification Service
-      - job_name: 'notification-service'
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - course-plat
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name]
-            action: keep
-            regex: notification-service
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            action: keep
-            regex: metrics
-        metrics_path: /actuator/prometheus
-
       # Content Service
       - job_name: 'content-service'
         kubernetes_sd_configs:
