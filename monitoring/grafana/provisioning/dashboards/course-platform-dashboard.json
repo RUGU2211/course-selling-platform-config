@@ -1,0 +1,264 @@
+{
+  "dashboard": {
+    "title": "Course Platform - Microservices Dashboard",
+    "tags": ["microservices", "spring-boot", "course-platform"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\"user-service|course-service|enrollment-service|content-service|api-gateway\"}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 12, "x": 0, "y": 0},
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "textMode": "value_and_name"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"options": {"0": {"text": "DOWN", "color": "red"}}, "type": "value"},
+              {"options": {"1": {"text": "UP", "color": "green"}}, "type": "value"}
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Gateway - Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(spring_cloud_gateway_requests_seconds_count[5m])",
+            "refId": "A",
+            "legendFormat": "{{uri}} - {{method}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "API Gateway - Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(spring_cloud_gateway_requests_seconds_bucket[5m]))",
+            "refId": "A",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(spring_cloud_gateway_requests_seconds_bucket[5m]))",
+            "refId": "B",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "yaxes": [
+          {"format": "s", "label": "Response Time"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "JVM Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_memory_used_bytes{job=~\"user-service|course-service|enrollment-service|content-service|api-gateway\", area=\"heap\"}",
+            "refId": "A",
+            "legendFormat": "{{job}} - {{id}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "JVM Memory Max",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_memory_max_bytes{job=~\"user-service|course-service|enrollment-service|content-service|api-gateway\", area=\"heap\"}",
+            "refId": "A",
+            "legendFormat": "{{job}} - {{id}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "HTTP Request Rate by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count[5m])) by (job, status)",
+            "refId": "A",
+            "legendFormat": "{{job}} - {{status}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Error Rate by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) by (job)",
+            "refId": "A",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "yaxes": [
+          {"format": "reqps", "label": "Errors/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Database Connection Pool - Active",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "hikari_connections_active{job=~\"user-service|course-service|enrollment-service|content-service\"}",
+            "refId": "A",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "yaxes": [
+          {"format": "short"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Database Connection Pool - Idle",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "hikari_connections_idle{job=~\"user-service|course-service|enrollment-service|content-service\"}",
+            "refId": "A",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "yaxes": [
+          {"format": "short"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Eureka Registered Services",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "eureka_registered_instances",
+            "refId": "A",
+            "legendFormat": "{{application}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+        "yaxes": [
+          {"format": "short", "label": "Instances"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Eureka Registrations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(eureka_registrations_total[5m])",
+            "refId": "A",
+            "legendFormat": "{{application}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+        "yaxes": [
+          {"format": "reqps", "label": "Registrations/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 12,
+        "title": "CPU Usage by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "system_cpu_usage{job=~\"user-service|course-service|enrollment-service|content-service|api-gateway\"}",
+            "refId": "A",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 44},
+        "yaxes": [
+          {"format": "percentunit", "label": "CPU Usage"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Thread Count by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_threads_live_threads{job=~\"user-service|course-service|enrollment-service|content-service|api-gateway\"}",
+            "refId": "A",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 44},
+        "yaxes": [
+          {"format": "short", "label": "Threads"},
+          {"format": "short"}
+        ]
+      }
+    ],
+    "time": {"from": "now-30m", "to": "now"},
+    "timepicker": {},
+    "templating": {"list": []},
+    "annotations": {"list": []},
+    "links": []
+  }
+}
+
