@@ -60,14 +60,14 @@ spec:
             cpu: "1000m"
         livenessProbe:
           httpGet:
-            path: /actuator/health
+            path: /enrollment-service/actuator/health
             port: 8084
           initialDelaySeconds: 120
           periodSeconds: 10
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /actuator/health
+            path: /enrollment-service/actuator/health
             port: 8084
           initialDelaySeconds: 60
           periodSeconds: 5
