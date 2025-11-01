@@ -8,11 +8,10 @@ This platform consists of the following microservices:
 
 - **API Gateway** (Port 8765) - Central entry point for all API requests
 - **Eureka Server** (Port 8761) - Service discovery and registration
+- **Config Server** (Port 8888) - Centralized configuration management
 - **User Management Service** (Port 8082) - User registration, authentication, and profile management
 - **Course Management Service** (Port 8083) - Course creation, management, and reviews
 - **Enrollment Service** (Port 8084) - Student course enrollment and progress tracking
-- **Payment Service** (Port 8086) - Payment processing and order management
-- **Notification Service** (Port 8085) - Email and in-app notifications
 - **Content Delivery Service** (Port 8087) - Course content upload and streaming
 - **Frontend Application** (Port 3000) - React-based user interface
 
@@ -71,7 +70,7 @@ docker-compose -f docker-compose.prod.yml up -d
 - **Eureka Server:** http://localhost:8761
 
 ### Database
-- **MySQL:** localhost:3306
+- **MySQL:** localhost:3307 (Docker Compose) or localhost:3306 (Kubernetes)
 
 ## API Documentation
 
@@ -92,14 +91,6 @@ Complete API endpoints documentation is available in [API_ENDPOINTS.md](API_ENDP
 #### Enrollment
 - `POST /enrollment-service/api/enrollments` - Enroll in course
 - `GET /enrollment-service/api/enrollments/student/{id}` - Get student enrollments
-
-#### Payment
-- `POST /payment-service/api/payments/process` - Process payment
-- `GET /payment-service/api/payments/orders/{userId}` - Get purchase history
-
-#### Notifications
-- `POST /notification-service/api/notifications/send` - Send notification
-- `GET /notification-service/api/notifications/user/{userId}` - Get user notifications
 
 #### Content Delivery
 - `POST /content-delivery-service/api/content/{courseId}/upload` - Upload content
@@ -148,11 +139,11 @@ All services are configured to work without a centralized config server. Each se
 All services expose health endpoints at `/actuator/health`:
 - User Service: http://localhost:8082/actuator/health
 - Course Service: http://localhost:8083/actuator/health
-- Enrollment Service: http://localhost:8084/actuator/health
-- Notification Service: http://localhost:8085/actuator/health
-- Payment Service: http://localhost:8086/actuator/health
+- Enrollment Service: http://localhost:8084/enrollment-service/actuator/health
 - Content Service: http://localhost:8087/actuator/health
 - API Gateway: http://localhost:8765/actuator/health
+- Config Server: http://localhost:8888/actuator/health
+- Eureka Server: http://localhost:8761/actuator/health
 
 ### Service Discovery
 - Eureka Dashboard: http://localhost:8761
@@ -162,9 +153,7 @@ All services expose health endpoints at `/actuator/health`:
 - **User Management:** Registration, authentication, profile management
 - **Course Management:** Create, update, delete courses with reviews
 - **Enrollment System:** Student enrollment with progress tracking
-- **Payment Processing:** Secure payment handling with Razorpay integration
 - **Content Delivery:** Video upload and streaming capabilities
-- **Notifications:** Email and in-app notification system
 - **Service Discovery:** Automatic service registration and discovery
 - **API Gateway:** Centralized routing and load balancing
 - **Inter-Service Communication:** Strong backend integration using OpenFeign clients
@@ -172,12 +161,12 @@ All services expose health endpoints at `/actuator/health`:
 
 ## Technology Stack
 
-- **Backend:** Spring Boot, Spring Cloud Gateway, Spring Security
+- **Backend:** Spring Boot, Spring Cloud Gateway, Spring Security, Spring Cloud Config
 - **Frontend:** React, TypeScript, Vite
 - **Database:** MySQL
 - **Service Discovery:** Netflix Eureka
 - **Containerization:** Docker, Docker Compose
-- **Payment:** Razorpay integration
+- **CI/CD:** Jenkins
 
 ## Project Structure
 
@@ -185,13 +174,13 @@ All services expose health endpoints at `/actuator/health`:
 course-selling-platform/
 ├── api-gateway/                 # API Gateway service
 ├── eureka-server/              # Service discovery
+├── config-server/              # Centralized configuration
 ├── user-management-service/    # User management
 ├── course-management-service/  # Course management
 ├── enrollmentservice/          # Enrollment service
-├── payment/                    # Payment service
-├── notification-service/       # Notification service
 ├── content-delivery-service/   # Content delivery
 ├── frontend/                  # React frontend
+├── k8s/                      # Kubernetes manifests
 ├── docker/                    # Docker configurations
 ├── docker-compose.yml         # Docker Compose setup
 └── API_ENDPOINTS.md          # API documentation
