@@ -1,273 +1,248 @@
 # Monitoring Setup Guide
 
-This guide explains how to set up real-time monitoring with Prometheus and Grafana for the Course Selling Platform.
-
-## Overview
-
-The monitoring stack consists of:
-- **Prometheus** - Metrics collection and storage
-- **Grafana** - Visualization and dashboards
-- **Spring Boot Actuator** - Metrics endpoints in all services
+This document describes the monitoring infrastructure for the Course Selling Platform using Prometheus and Grafana.
 
 ## Architecture
 
 ```
-Microservices (Port 8081/metrics)
-    ↓
-Prometheus (Port 9090) - Scrapes metrics every 15s
-    ↓
-Grafana (Port 3000) - Visualizes metrics from Prometheus
+┌─────────────────────┐
+│   All Microservices │
+│  (expose /actuator/ │
+│   prometheus)       │
+└──────────┬──────────┘
+           │ Scrapes metrics
+           ▼
+┌─────────────────────┐
+│     Prometheus      │
+│  (Port 9090)        │
+└──────────┬──────────┘
+           │ Queries data
+           ▼
+┌─────────────────────┐
+│      Grafana        │
+│  (Port 3030)        │
+└─────────────────────┘
 ```
 
-## Prerequisites
-
-1. Kubernetes cluster running
-2. All microservices deployed with Actuator enabled
-3. Network connectivity between services
-
-## Deployment
-
-### Kubernetes Deployment
-
-The Jenkins pipeline automatically deploys Prometheus and Grafana, or deploy manually:
-
-```bash
-# Deploy Prometheus
-kubectl apply -f k8s/prometheus.yaml
-
-# Deploy Grafana
-kubectl apply -f k8s/grafana.yaml
-
-# Check status
-kubectl get pods -n course-plat | grep -E "prometheus|grafana"
-```
-
-### Docker Compose Deployment (Local Development)
-
-```bash
-# Start monitoring stack
-docker-compose -f docker-compose.monitoring.yml up -d
-
-# Or combine with main services
-docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-```
-
-## Access
+## Services
 
 ### Prometheus
-
-**Kubernetes:**
-- **URL**: `http://<node-ip>:30090`
-- **Port Forward**: `kubectl port-forward -n course-plat svc/prometheus 9090:9090`
-- **Access**: `http://localhost:9090`
-
-**Docker Compose:**
-- **URL**: `http://localhost:9090`
+- **URL:** http://localhost:9090
+- **Purpose:** Metrics collection and storage
+- **Configuration:** `monitoring/prometheus.yml`
+- **Retention:** 30 days
 
 ### Grafana
+- **URL:** http://localhost:3030
+- **Credentials:** admin/admin
+- **Purpose:** Visualization and dashboards
+- **Pre-configured Dashboard:** Course Platform - Microservices Dashboard
 
-**Kubernetes:**
-- **URL**: `http://<node-ip>:30300`
-- **Port Forward**: `kubectl port-forward -n course-plat svc/grafana 3030:3000`
-- **Access**: `http://localhost:3030`
+## Enabled Metrics
 
-**Docker Compose:**
-- **URL**: `http://localhost:3030`
+All Spring Boot services expose the following metrics:
+- **JVM Metrics:** Memory usage, CPU usage, thread counts
+- **HTTP Metrics:** Request rates, response times, error rates
+- **Application Metrics:** Database connections, cache stats
+- **Eureka Metrics:** Service registration counts
 
-**Default Credentials:**
-- Username: `admin`
-- Password: `admin`
+## Starting Monitoring
 
-## Configuration
-
-### Prometheus Configuration
-
-Prometheus is configured to scrape metrics from:
-
-1. **Eureka Server** - Service discovery metrics
-2. **Config Server** - Configuration metrics
-3. **Actuator Service** - Centralized metrics collection
-4. **API Gateway** - Gateway metrics
-5. **All Microservices** - Application metrics
-   - User Service
-   - Course Service
-   - Enrollment Service
-   - Payment Service
-   - Notification Service
-   - Content Service
-
-### Metrics Endpoints
-
-All Spring Boot services expose metrics at:
-- **HTTP Endpoint**: `http://service:8081/actuator/prometheus`
-- **Path**: `/actuator/prometheus`
-
-### Grafana Data Source
-
-Grafana is pre-configured with:
-- **Data Source**: Prometheus
-- **URL**: `http://prometheus:9090` (Kubernetes) or `http://prometheus:9090` (Docker)
-
-## Metrics Available
-
-### Spring Boot Metrics
-
-All services expose standard Spring Boot metrics:
-- `jvm_memory_used_bytes` - JVM memory usage
-- `jvm_gc_pause_seconds` - GC pause times
-- `http_server_requests_seconds` - HTTP request latency
-- `http_server_requests_total` - Total HTTP requests
-- `process_cpu_usage` - CPU usage
-- `system_load_average_1m` - System load
-
-### Custom Metrics
-
-Services can expose custom business metrics via Actuator endpoints.
-
-## Creating Dashboards
-
-### Import Pre-built Dashboards
-
-1. Go to Grafana → **Dashboards** → **Import**
-2. Use dashboard IDs from Grafana.com:
-   - Spring Boot 2.1 Statistics: `11378`
-   - JVM (Micrometer): `4701`
-   - Kubernetes Cluster Monitoring: `7249`
-
-### Create Custom Dashboards
-
-1. Go to Grafana → **Dashboards** → **New Dashboard**
-2. Add panels with Prometheus queries:
-   ```promql
-   # CPU Usage
-   process_cpu_usage{application="user-service"}
-   
-   # Memory Usage
-   jvm_memory_used_bytes{application="user-service"}
-   
-   # HTTP Request Rate
-   rate(http_server_requests_total{application="user-service"}[5m])
-   ```
-
-## Monitoring Services in Jenkins Pipeline
-
-The Jenkins pipeline automatically:
-1. Deploys Prometheus and Grafana alongside application services
-2. Configures Prometheus to scrape all services
-3. Sets up Grafana with Prometheus as data source
-4. Waits for monitoring services to be ready
-
-## Troubleshooting
-
-### Prometheus Not Scraping Metrics
-
+### Option 1: With all services
 ```bash
-# Check Prometheus targets
-kubectl port-forward -n course-plat svc/prometheus 9090:9090
-# Open http://localhost:9090/targets
-
-# Check service endpoints
-kubectl get endpoints -n course-plat
-
-# Test metrics endpoint manually
-kubectl port-forward -n course-plat svc/user-service 8082:8082
-curl http://localhost:8082/actuator/prometheus
+docker-compose up -d
 ```
 
-### Grafana Can't Connect to Prometheus
-
+### Option 2: Monitoring only
 ```bash
-# Check Prometheus service
-kubectl get svc prometheus -n course-plat
+# Start monitoring services
+docker-compose up -d prometheus grafana
 
-# Check Grafana logs
-kubectl logs -n course-plat deployment/grafana
-
-# Verify network connectivity
-kubectl exec -n course-plat deployment/grafana -- wget -O- http://prometheus:9090/api/v1/status/config
+# Or use separate compose file
+docker-compose -f docker-compose.monitoring.yml up -d
 ```
 
-### Services Not Exposing Metrics
+### Option 3: From scratch
+```bash
+# 1. Build and start all services
+docker-compose up -d
 
-Ensure services have Actuator enabled and Prometheus endpoint exposed:
+# 2. Verify services are running
+docker-compose ps
 
+# 3. Check Prometheus targets
+open http://localhost:9090/targets
+
+# 4. Open Grafana dashboard
+open http://localhost:3030
+```
+
+## Access Points
+
+- **Frontend:** http://localhost:3000
+- **API Gateway:** http://localhost:8765
+- **Prometheus:** http://localhost:9090
+- **Grafana:** http://localhost:3030
+- **Eureka Dashboard:** http://localhost:8761
+
+## Prometheus Targets
+
+All targets are configured in `monitoring/prometheus.yml`:
+- `eureka-server` - Service discovery metrics
+- `config-server` - Configuration server metrics
+- `api-gateway` - Gateway routing metrics
+- `user-service` - User management metrics
+- `course-service` - Course management metrics
+- `enrollment-service` - Enrollment metrics
+- `content-service` - Content delivery metrics
+
+## Grafana Dashboard
+
+The pre-configured dashboard includes:
+
+1. **Service Health Overview** - UP/DOWN status for all services
+2. **API Gateway - Request Rate** - Requests per second
+3. **API Gateway - Response Time** - P95/P99 latencies
+4. **JVM Memory Usage** - Heap memory consumption
+5. **HTTP Request Rate** - By service and status code
+6. **Error Rate** - 5xx errors per service
+7. **Database Connection Pool** - Active/idle connections
+8. **Eureka Registrations** - Service discovery metrics
+9. **CPU Usage** - By service
+10. **Thread Count** - JVM thread metrics
+
+## Adding Prometheus Support
+
+To add Prometheus metrics to a new service:
+
+1. Add dependency to `pom.xml`:
+```xml
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+```
+
+2. Enable Prometheus endpoint in `application.yml`:
 ```yaml
 management:
   endpoints:
     web:
       exposure:
         include: prometheus,health,info,metrics
-  endpoint:
-    prometheus:
-      enabled: true
-  metrics:
-    export:
-      prometheus:
-        enabled: true
 ```
 
-## Best Practices
-
-1. **Retention**: Prometheus is configured with 30-day retention
-2. **Storage**: Use persistent volumes for Prometheus and Grafana data
-3. **Alerts**: Set up alerting rules in Prometheus for critical metrics
-4. **Dashboards**: Create dashboards for each service
-5. **Performance**: Monitor Prometheus memory usage and adjust retention if needed
-
-## Advanced Configuration
-
-### Custom Scrape Intervals
-
-Edit `k8s/prometheus.yaml` to adjust scrape intervals:
-
+3. Add scrape target to `monitoring/prometheus.yml`:
 ```yaml
-global:
-  scrape_interval: 15s  # Change to 30s, 1m, etc.
+- job_name: 'your-service'
+  static_configs:
+    - targets: ['your-service:8080']
+  metrics_path: /actuator/prometheus
 ```
 
-### Resource Limits
-
-Adjust resource limits in Prometheus/Grafana manifests based on cluster capacity.
-
-### High Availability
-
-For production:
-- Run Prometheus with 2+ replicas
-- Use external storage (e.g., Thanos)
-- Set up Grafana with multiple instances behind a load balancer
-
-## Useful Queries
-
-### Service Health
-```
-up{job="user-service"}
+4. Rebuild and restart:
+```bash
+docker-compose up -d --build your-service
 ```
 
-### Request Rate
-```
-rate(http_server_requests_total{application="user-service"}[5m])
+## Troubleshooting
+
+### Prometheus targets showing DOWN
+
+1. Check service is running:
+```bash
+docker-compose ps
 ```
 
-### Error Rate
-```
-rate(http_server_requests_total{application="user-service",status=~"5.."}[5m])
-```
-
-### Memory Usage
-```
-jvm_memory_used_bytes{application="user-service",area="heap"}
+2. Check endpoint exists:
+```bash
+curl http://localhost:<port>/actuator/prometheus
 ```
 
-### Response Time (p95)
+3. Check Prometheus logs:
+```bash
+docker-compose logs prometheus
 ```
-histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{application="user-service"}[5m]))
+
+### Grafana not showing data
+
+1. Verify Prometheus datasource:
+   - Go to Configuration → Data Sources
+   - Check Prometheus URL is `http://prometheus:9090`
+
+2. Check dashboard queries:
+   - Open dashboard
+   - Click panel → Edit
+   - Verify metric names are correct
+
+### No metrics endpoints
+
+Ensure Micrometer Prometheus dependency is added and services are rebuilt:
+```bash
+# Rebuild all services
+docker-compose up -d --build
+
+# Check individual service
+docker-compose logs <service-name>
 ```
 
-## Support
+## Useful Prometheus Queries
 
-For issues:
-1. Check Prometheus targets page: `/targets`
-2. Check Grafana logs
-3. Verify services are exposing metrics
-4. Check network connectivity between services
+```promql
+# Request rate
+rate(spring_cloud_gateway_requests_seconds_count[5m])
 
+# Error rate
+rate(http_server_requests_seconds_count{status=~"5.."}[5m])
+
+# Memory usage percent
+jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100
+
+# Average response time
+rate(http_server_requests_seconds_sum[5m]) / rate(http_server_requests_seconds_count[5m])
+```
+
+## Production Considerations
+
+For production deployment:
+
+1. **Persistent Storage:** Already configured with Docker volumes
+2. **Authentication:** Configure Grafana authentication
+3. **Alerts:** Set up Prometheus AlertManager
+4. **Retention:** Adjust `--storage.tsdb.retention.time` in Prometheus
+5. **Resource Limits:** Add CPU/memory limits to containers
+
+## Next Steps
+
+1. Rebuild all services with Micrometer Prometheus:
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+2. Wait for all services to start:
+```bash
+docker-compose ps
+```
+
+3. Verify Prometheus is scraping:
+```bash
+# Check targets
+curl http://localhost:9090/api/v1/targets | jq
+
+# Check service registry
+curl http://localhost:8761
+```
+
+4. Open Grafana dashboard:
+```bash
+open http://localhost:3030
+# Login: admin/admin
+```
+
+## Documentation
+
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [Grafana Documentation](https://grafana.com/docs/)
+- [Micrometer Documentation](https://micrometer.io/)
+- [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html)
