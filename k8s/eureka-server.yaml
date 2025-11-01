@@ -63,11 +63,13 @@ metadata:
   name: eureka-server
   namespace: course-plat
 spec:
+  type: NodePort
   selector:
     app: eureka-server
   ports:
   - port: 8761
     targetPort: 8761
+    nodePort: 30761
     name: http
   - port: 8081
     targetPort: 8081

@@ -41,16 +41,6 @@ spring:
           predicates:
             - Path=/enrollment-service/api/enrollments/**
 
-        - id: payment-service
-          uri: lb://payment-service
-          predicates:
-            - Path=/payment-service/api/payments/**
-
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/notification-service/api/notifications/**
-
         - id: content-delivery-service
           uri: lb://content-delivery-service
           predicates:

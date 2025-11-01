@@ -4,7 +4,7 @@ metadata:
   name: frontend-config
   namespace: course-plat
 data:
-  VITE_API_URL: "http://api-gateway:8765"
+  VITE_API_URL: "/api"
 ---
 apiVersion: apps/v1
 kind: Deployment

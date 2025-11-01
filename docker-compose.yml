@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MySQL Database
   mysql:
@@ -141,7 +139,7 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
       - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8084/enrollment-service/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 10

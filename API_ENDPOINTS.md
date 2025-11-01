@@ -24,7 +24,9 @@ POST {{base_url}}/user-management-service/api/users/register
 **Body (raw JSON):**
 ```json
 {
-  "fullName": "Test User",
+  "username": "testuser",
+  "firstName": "Test",
+  "lastName": "User",
   "email": "test@example.com",
   "password": "Password123!",
   "role": "STUDENT"
@@ -81,13 +83,6 @@ Course Platform APIs
 │   ├── Enroll in Course (Requires Login)
 │   ├── Get My Enrollments (Requires Login)
 │   └── Update Progress (Requires Login)
-├── Payment
-│   ├── Process Payment (Requires Login)
-│   └── Get Payment History (Requires Login)
-├── Notifications
-│   ├── Send Notification (Requires Login)
-│   ├── Get My Notifications (Requires Login)
-│   └── Mark as Read (Requires Login)
 └── Content
     ├── Get Course Content
     ├── Upload Content (Requires Login)
@@ -101,11 +96,9 @@ Course Platform APIs
 1. **Register** → Get JWT token
 2. **Login** → Verify token works
 3. **View Courses** → Browse available courses
-4. **Enroll in Course** → Enroll in a free course
-5. **Process Payment** → Pay for a paid course
-6. **View Enrollments** → Check enrolled courses
-7. **Update Progress** → Track learning progress
-8. **View Notifications** → Check for updates
+4. **Enroll in Course** → Enroll in a course
+5. **View Enrollments** → Check enrolled courses
+6. **Update Progress** → Track learning progress
 
 ### Sample Postman Collection JSON
 
@@ -176,10 +169,6 @@ Course Platform APIs
 - [ ] Update course details
 - [ ] Enroll in a course
 - [ ] View my enrollments
-- [ ] Process a payment
-- [ ] View payment history
-- [ ] Send a notification
-- [ ] View my notifications
 - [ ] Get course content
 - [ ] Update enrollment progress
 
@@ -227,7 +216,9 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
 - **Body:**
 ```json
 {
-  "fullName": "John Doe",
+  "username": "johndoe",
+  "firstName": "John",
+  "lastName": "Doe",
   "email": "john.doe@example.com",
   "password": "SecurePassword123",
   "role": "STUDENT"
@@ -404,116 +395,10 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
 
 ---
 
-### 4. Payment Service
-**Base URL:** `http://localhost:8765/payment-service/api/payments`
-
-#### 4.1 Process a Payment
-- **Method:** POST
-- **Path:** `/payment-service/api/payments/process`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
-```json
-{
-  "orderId": 123,
-  "paymentMethod": "CREDIT_CARD",
-  "transactionId": "txn_4567890",
-  "amount": 99.99
-}
-```
-
-#### 4.2 Create Payment (Order)
-- **Method:** POST
-- **Path:** `/payment-service/api/payments/process`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
-```json
-{
-  "userId": 1,
-  "courseId": 101,
-  "amount": 99.99,
-  "paymentMethod": "CREDIT_CARD"
-}
-```
-
-#### 4.3 Get Purchase History for a User
-- **Method:** GET
-- **Path:** `/payment-service/api/payments/orders/{userId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Example:** `/payment-service/api/payments/orders/1`
-
-#### 4.4 Process a Refund
-- **Method:** POST
-- **Path:** `/payment-service/api/payments/refund?orderId=789`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
-```json
-{
-  "paymentId": 789,
-  "reason": "Course cancellation"
-}
-```
-
-#### 4.5 Get Payment Details by ID
-- **Method:** GET
-- **Path:** `/payment-service/api/payments/{paymentId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Example:** `/payment-service/api/payments/789`
-
-#### 4.6 Process Payment with Validation (Enhanced Inter-Service Workflow)
-- **Method:** POST
-- **Path:** `/payment-service/api/payments/workflow/process`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Parameters:** `userId`, `courseId`, `amount`
-- **Description:** Validates user and course, processes payment, and creates enrollment
-
-#### 4.7 Get User Payment History (Enhanced Inter-Service Communication)
-- **Method:** GET
-- **Path:** `/payment-service/api/payments/workflow/user/{userId}/history`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Description:** Returns comprehensive payment history with user profile and enrollments
-
----
-
-### 5. Notification Service
-**Base URL:** `http://localhost:8765/notification-service/api/notifications`
-
-#### 5.1 Send a Notification
-- **Method:** POST
-- **Path:** `/notification-service/api/notifications/send`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
-```json
-{
-  "userId": 1,
-  "title": "Course Completion",
-  "message": "Congratulations on completing your course!",
-  "type": "EMAIL"
-}
-```
-
-#### 5.2 Get Notifications for a User
-- **Method:** GET
-- **Path:** `/notification-service/api/notifications/user/{userId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Example:** `/notification-service/api/notifications/user/1`
-
-#### 5.3 Mark Notification as Read
-- **Method:** PUT
-- **Path:** `/notification-service/api/notifications/{notificationId}/read`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Example:** `/notification-service/api/notifications/10/read`
-
-#### 5.4 Delete a Notification
-- **Method:** DELETE
-- **Path:** `/notification-service/api/notifications/{notificationId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-
----
-
-### 6. Content Delivery Service
+### 4. Content Delivery Service
 **Base URL:** `http://localhost:8765/content-delivery-service/api/content`
 
-#### 6.1 Upload Course Content (Instructor Only)
+#### 4.1 Upload Course Content (Instructor Only)
 - **Method:** POST
 - **Path:** `/content-delivery-service/api/content/{courseId}/upload`
 - **Headers:**
@@ -524,18 +409,18 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
   - `title`: "Lesson 1: Introduction"
   - `description`: "Course introduction video"
 
-#### 6.2 Get All Content for a Course
+#### 4.2 Get All Content for a Course
 - **Method:** GET
 - **Path:** `/content-delivery-service/api/content/course/{courseId}`
 - **Headers:** `Authorization: Bearer <JWT_TOKEN>` (if protected)
 - **Example:** `/content-delivery-service/api/content/course/101`
 
-#### 6.3 Stream Video Content
+#### 4.3 Stream Video Content
 - **Method:** GET
 - **Path:** `/content-delivery-service/api/content/stream/{contentId}`
 - **Headers:** `Authorization: Bearer <JWT_TOKEN>` (if protected)
 
-#### 6.4 Delete Course Content (Instructor Only)
+#### 4.4 Delete Course Content (Instructor Only)
 - **Method:** DELETE
 - **Path:** `/content-delivery-service/api/content/{contentId}`
 - **Headers:** `Authorization: Bearer <JWT_TOKEN>`
@@ -552,9 +437,7 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
 All services expose health check endpoints at `/actuator/health`:
 - User Service: `http://localhost:8082/actuator/health`
 - Course Service: `http://localhost:8083/actuator/health`
-- Enrollment Service: `http://localhost:8084/actuator/health`
-- Notification Service: `http://localhost:8085/actuator/health`
-- Payment Service: `http://localhost:8086/actuator/health`
+- Enrollment Service: `http://localhost:8084/enrollment-service/actuator/health`
 - Content Service: `http://localhost:8087/actuator/health`
 - API Gateway: `http://localhost:8765/actuator/health`
 
@@ -563,17 +446,13 @@ All services expose health check endpoints at `/actuator/health`:
 - **Purpose:** React-based frontend application
 
 ## Database
-- **MySQL:** `localhost:3306`
+- **MySQL:** `localhost:3307` (Docker Compose) or `localhost:3306` (K8s)
 - **Databases:** 
   - `users_db`
   - `courses_db`
   - `enrollment_db`
-  - `notification_db`
-  - `payment_db`
   - `content_db`
 
-## Additional Services
-- **MySQL Database:** `localhost:3306` (Primary database)
 
 ## Authentication
 All protected endpoints require a JWT token in the Authorization header:

@@ -17,9 +17,8 @@ Each service has its own manifest file for better organization and management:
 - **`user-service.yaml`** - User management service
 - **`course-service.yaml`** - Course management service
 - **`enrollment-service.yaml`** - Enrollment service
-- **`payment-service.yaml`** - Payment service
-- **`notification-service.yaml`** - Notification service
 - **`content-service.yaml`** - Content delivery service
+- **`frontend.yaml`** - Frontend React application
 
 ### Monitoring Services
 - **`prometheus.yaml`** - Prometheus metrics collection and storage
@@ -59,15 +58,13 @@ kubectl apply -f k8s/grafana.yaml
 ## Service Ports
 
 ### Application Services
-- **Eureka Server**: 8761
-- **Config Server**: 8888
+- **Eureka Server**: 8761 (NodePort: 30761)
+- **Config Server**: 8888 (NodePort: 30788)
 - **API Gateway**: 8765 (NodePort: 30765)
 - **Actuator**: 8081
 - **User Service**: 8082
 - **Course Service**: 8083
 - **Enrollment Service**: 8084
-- **Notification Service**: 8085
-- **Payment Service**: 8086
 - **Content Service**: 8087
 
 ### Monitoring Services
@@ -77,8 +74,10 @@ kubectl apply -f k8s/grafana.yaml
 ## Access Points
 
 ### Kubernetes (NodePort)
-- **Frontend**: `http://<node-ip>:30080`
+- **Frontend**: `http://<node-ip>:30000`
 - **API Gateway**: `http://<node-ip>:30765`
+- **Eureka Dashboard**: `http://<node-ip>:30761`
+- **Config Server**: `http://<node-ip>:30788`
 - **Prometheus**: `http://<node-ip>:30090`
 - **Grafana**: `http://<node-ip>:30300` (admin/admin)
 
@@ -120,11 +119,10 @@ Each service has its own ConfigMap with service-specific configuration:
 - `eureka-config` - Eureka Server config
 - `config-server-config` - Config Server config
 - `actuator-config` - Actuator config
+- `api-gateway-config` - API Gateway config
 - `user-service-config` - User service config
 - `course-service-config` - Course service config
 - `enrollment-service-config` - Enrollment service config
-- `payment-service-config` - Payment service config
-- `notification-service-config` - Notification service config
 - `content-service-config` - Content service config
 
 ### Secrets
@@ -138,7 +136,7 @@ Each service has its own ConfigMap with service-specific configuration:
 2. **Eureka Server** - Service discovery
 3. **Config Server** - Configuration service
 4. **Actuator** - Metrics service
-5. **Microservices** - User, Course, Enrollment, Payment, Notification, Content
+5. **Microservices** - User, Course, Enrollment, Content
 6. **API Gateway** - Routes requests to services
 7. **Monitoring** - Prometheus and Grafana (can start independently)
 
