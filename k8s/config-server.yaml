@@ -21,6 +21,10 @@ spec:
       labels:
         app: config-server
     spec:
+      initContainers:
+      - name: wait-for-eureka
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z eureka-server 8761; do echo waiting for eureka; sleep 2; done;']
       imagePullSecrets:
       - name: dockerhub-secret
       containers:
