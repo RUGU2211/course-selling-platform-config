@@ -36,15 +36,6 @@ public class User {
     @NotBlank(message = "Last name is required")
     private String lastName;
 
-    @Column
-    private String phone;
-
-    @Column(columnDefinition = "TEXT")
-    private String Bio;
-
-    @Column(name = "profile_image")
-    private String profileImage;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -127,30 +118,6 @@ public class User {
     // Convenience method to get full name
     public String getFullName() {
         return firstName + " " + lastName;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getBio() {
-        return Bio;
-    }
-
-    public void setBio(String bio) {
-        Bio = bio;
-    }
-
-    public String getProfileImage() {
-        return profileImage;
-    }
-
-    public void setProfileImage(String profileImage) {
-        this.profileImage = profileImage;
     }
 
     public UserRole getRole() {

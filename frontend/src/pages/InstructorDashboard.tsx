@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Container, Card, CardContent, Button } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchCourses, fetchCourseRatingSummary } from '../services/api';
+import { fetchCourses, fetchCourseRatingSummary, getCourseEnrollments } from '../services/api';
 
 const InstructorDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -17,9 +17,7 @@ const InstructorDashboard: React.FC = () => {
     totalCourses: 0,
   });
 
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
+  const loadDashboardData = React.useCallback(async () => {
       if (!user?.id) {
         setLoading(false);
         return;
@@ -28,54 +26,64 @@ const InstructorDashboard: React.FC = () => {
       try {
         // Fetch all courses
         const allCourses = await fetchCourses();
-        if (!mounted) return;
         
         // Filter courses for this instructor
         const instructorId = Number(user.id);
         const filtered = allCourses.filter((c: any) => c.instructorId === instructorId);
         setMyCourses(filtered);
         
-        // Fetch ratings for each course
-        const ratingPromises = filtered.map(async (course: any) => {
+      // Fetch ratings and enrollments for each course
+      const courseDataPromises = filtered.map(async (course: any) => {
           try {
-            const summary = await fetchCourseRatingSummary(course.id);
-            return { courseId: course.id, summary };
+          const [summary, enrollments] = await Promise.all([
+            fetchCourseRatingSummary(course.id).catch(() => ({ average: 0, count: 0 })),
+            getCourseEnrollments(course.id).catch(() => [])
+          ]);
+          return { courseId: course.id, summary, enrollments, coursePrice: course.price || 0 };
           } catch {
-            return { courseId: course.id, summary: { average: 0, count: 0 } };
+          return { courseId: course.id, summary: { average: 0, count: 0 }, enrollments: [], coursePrice: 0 };
           }
         });
         
-        const ratings = await Promise.all(ratingPromises);
+      const courseData = await Promise.all(courseDataPromises);
         const ratingsMap: Record<number, any> = {};
-        ratings.forEach(r => {
+      courseData.forEach(r => {
           ratingsMap[r.courseId] = r.summary;
         });
-        if (mounted) setCourseRatings(ratingsMap);
+      setCourseRatings(ratingsMap);
         
-        // Calculate statistics
-        // Note: We'll need to fetch enrollment and payment data separately
-        // For now, calculate from available data
+      // Calculate statistics from real-time data
+      const totalStudents = new Set(courseData.flatMap(d => d.enrollments.map((e: any) => e.studentId))).size;
+      const totalRevenue = courseData.reduce((sum, d) => sum + (d.enrollments.length * d.coursePrice), 0);
         const avgRating = filtered.length > 0
-          ? ratings.reduce((sum, r) => sum + r.summary.average, 0) / ratings.length
+        ? courseData.reduce((sum, r) => sum + r.summary.average, 0) / courseData.length
           : 0;
         
-        if (mounted) {
           setStats({
-            totalStudents: 0, // Would need enrollment service integration
-            totalRevenue: 0, // Would need payment service integration
+        totalStudents,
+        totalRevenue,
             averageRating: avgRating,
             totalCourses: filtered.length,
           });
-        }
       } catch (error) {
         console.error('Failed to load instructor dashboard:', error);
       } finally {
-        if (mounted) setLoading(false);
+      setLoading(false);
       }
-    })();
-    
-    return () => { mounted = false; };
   }, [user]);
+
+  React.useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  // Auto-refresh stats every 30 seconds
+  React.useEffect(() => {
+    if (!user?.id || loading) return;
+    const interval = setInterval(() => {
+      loadDashboardData();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user, loading, loadDashboardData]);
 
   if (loading) {
     return (
@@ -118,7 +126,7 @@ const InstructorDashboard: React.FC = () => {
                       size="small"
                       variant="outlined"
                       component={Link}
-                      to={`/courses/${course.id}`}
+                      to={`/instructor/course/${course.id}`}
                     >
                       Manage Course
                     </Button>

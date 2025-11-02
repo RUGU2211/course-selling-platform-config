@@ -27,13 +27,6 @@ public class UserRegistrationDto {
     @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
     private String lastName;
 
-    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Please provide a valid phone number",
-            flags = Pattern.Flag.CASE_INSENSITIVE)
-    private String phone;
-
-    @Size(max = 500, message = "Bio must not exceed 500 characters")
-    private String bio;
-
     @NotBlank(message = "Role is required")
     @Pattern(regexp = "STUDENT|INSTRUCTOR", message = "Role must be either STUDENT or INSTRUCTOR")
     private String role;
@@ -69,12 +62,6 @@ public class UserRegistrationDto {
     // Convenience method to get full name
     @JsonIgnore
     public String getFullName() { return firstName + " " + lastName; }
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-
-    public String getBio() { return bio; }
-    public void setBio(String bio) { this.bio = bio; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

@@ -26,8 +26,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtUtil jwtUtil;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@org.springframework.lang.NonNull HttpServletRequest request, 
+                                    @org.springframework.lang.NonNull HttpServletResponse response,
+                                    @org.springframework.lang.NonNull FilterChain filterChain) throws ServletException, IOException {
 
         final String authorizationHeader = request.getHeader("Authorization");
 
@@ -79,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@org.springframework.lang.NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
         
         logger.debug("JWT Filter - Request URI: {}", path);
@@ -89,6 +90,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/api/users/login") ||
                 path.startsWith("/api/users/health") ||
                 path.startsWith("/api/users/validate-token") ||
+                path.startsWith("/api/users/stats") ||
                 path.startsWith("/actuator/") ||
                 path.startsWith("/h2-console/") ||
                 path.equals("/error");

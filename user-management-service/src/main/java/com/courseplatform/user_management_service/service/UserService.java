@@ -61,8 +61,6 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
             user.setFirstName(dto.getFirstName().trim());
             user.setLastName(dto.getLastName().trim());
-            user.setPhone(dto.getPhone() != null ? dto.getPhone().trim() : null);
-            user.setBio(dto.getBio() != null ? dto.getBio().trim() : null);
             user.setRole(role);
 
             // Auto-verify students, instructors need manual verification
@@ -179,18 +177,6 @@ public class UserService {
                 } else {
                     user.setLastName("");
                 }
-                updated = true;
-            }
-
-            if (updates.containsKey("phone")) {
-                String phone = updates.get("phone") != null ? updates.get("phone").toString().trim() : null;
-                user.setPhone(phone);
-                updated = true;
-            }
-
-            if (updates.containsKey("bio")) {
-                String bio = updates.get("bio") != null ? updates.get("bio").toString().trim() : null;
-                user.setBio(bio);
                 updated = true;
             }
 
@@ -473,9 +459,6 @@ public class UserService {
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setFullName(user.getFullName());
-        dto.setPhone(user.getPhone());
-        dto.setBio(user.getBio());
-        dto.setProfileImage(user.getProfileImage());
         dto.setRole(user.getRole());
         dto.setIsActive(user.getActive());
         dto.setIsVerified(user.getVerified());

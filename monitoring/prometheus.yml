@@ -53,3 +53,9 @@ scrape_configs:
       - targets: ['course-platform-content-service:8087']
     metrics_path: /actuator/prometheus
 
+  # Actuator Service
+  - job_name: 'actuator'
+    static_configs:
+      - targets: ['course-platform-actuator:8081']
+    metrics_path: /actuator/prometheus
+

@@ -2,6 +2,7 @@ package com.example.content_delivery_service.controller;
 
 import com.example.content_delivery_service.entity.ContentAccessLog;
 import com.example.content_delivery_service.dto.ContentAccessLogDto;
+import com.example.content_delivery_service.dto.ContentAccessLogRequest;
 import com.example.content_delivery_service.service.ContentAccessLogService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +21,8 @@ public class ContentAccessLogController {
     }
 
     @PostMapping
-    public ResponseEntity<ContentAccessLog> addLog(@RequestBody ContentAccessLog log) {
-        return ResponseEntity.ok(logService.saveLog(log));
+    public ResponseEntity<ContentAccessLog> addLog(@RequestBody ContentAccessLogRequest request) {
+        return ResponseEntity.ok(logService.saveLogFromRequest(request));
     }
 
     @GetMapping

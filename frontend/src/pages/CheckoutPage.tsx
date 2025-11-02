@@ -51,9 +51,11 @@ const CheckoutPage: React.FC = () => {
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (e: any) {
-      setError('Enrollment failed. Please try again.');
+      console.error('Enrollment error:', e);
+      const errorMessage = e?.message || 'Enrollment failed. Please try again.';
+      setError(errorMessage);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (!course) return null;
@@ -92,10 +94,10 @@ const CheckoutPage: React.FC = () => {
             Enroll in Course
           </Typography>
           <Box sx={{ mb: 3 }}>
-            <Typography variant="h6">{course.title}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Instructor: {course.instructorId ? `#${course.instructorId}` : 'Unknown'}
-            </Typography>
+          <Typography variant="h6">{course.title}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Instructor: {course.instructorId ? `#${course.instructorId}` : 'Unknown'}
+          </Typography>
             {course.description && (
               <Typography variant="body2" sx={{ mb: 2 }}>
                 {course.description}
@@ -103,8 +105,8 @@ const CheckoutPage: React.FC = () => {
             )}
             {course.price > 0 && (
               <Typography variant="h5" color="primary.main" fontWeight="bold">
-                ${Number(course.price || 0).toFixed(2)}
-              </Typography>
+            ${Number(course.price || 0).toFixed(2)}
+          </Typography>
             )}
           </Box>
 

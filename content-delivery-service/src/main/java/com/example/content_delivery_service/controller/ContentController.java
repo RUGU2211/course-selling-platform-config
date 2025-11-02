@@ -9,7 +9,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/content")
-public class    ContentController {
+@CrossOrigin(origins = "*")
+public class ContentController {
 
     private final ContentService contentService;
 

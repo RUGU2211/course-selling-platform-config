@@ -1,12 +1,15 @@
 spring:
   application:
     name: api-gateway
-  config:
-    import: optional:configserver:http://course-platform-config:8888
-  profiles:
-    active: docker
+  # Config Server import disabled for local development
+  # config:
+  #   import: optional:configserver:http://course-platform-config:8888
+  # profiles:
+  #   active: docker
   cloud:
     gateway:
-      default-filters:
-        - RemoveResponseHeader=Access-Control-Allow-Origin
-        - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_FIRST
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false

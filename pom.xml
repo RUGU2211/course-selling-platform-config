@@ -49,6 +49,7 @@
         <module>user-management-service</module>
         <module>enrollmentservice</module>
         <module>course-management-service</module>
+        <module>content-delivery-service</module>
     </modules>
 
     <dependencies>

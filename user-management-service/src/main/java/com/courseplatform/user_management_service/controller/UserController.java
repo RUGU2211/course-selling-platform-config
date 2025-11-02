@@ -97,7 +97,6 @@ public class UserController {
     }
 
     @GetMapping("/stats")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getPlatformStats() {
         return ResponseEntity.ok(userService.getPlatformStats());
     }

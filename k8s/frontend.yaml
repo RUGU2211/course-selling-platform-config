@@ -5,6 +5,7 @@ metadata:
   namespace: course-plat
 data:
   VITE_API_URL: "/api"
+  API_BASE: "/api"
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -7,6 +7,7 @@ data:
   SPRING_PROFILES_ACTIVE: "docker"
   SPRING_APPLICATION_NAME: "api-gateway"
   EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+  EUREKA_INSTANCE_HOSTNAME: "api-gateway"
   SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: apps/v1

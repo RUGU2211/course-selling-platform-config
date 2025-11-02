@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/enrollment-service/api/enrollments")
+@RequestMapping("/api/enrollments")
 @CrossOrigin(origins = "*")
 public class EnrollmentWorkflowController {
 

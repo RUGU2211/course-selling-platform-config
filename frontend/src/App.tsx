@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import CheckoutPage from './pages/CheckoutPage';
 import InstructorCreateCoursePage from './pages/InstructorCreateCoursePage';
+import InstructorCourseManagement from './pages/InstructorCourseManagement';
 
 // Create theme
 const theme = createTheme({
@@ -92,6 +93,7 @@ const App: React.FC = () => {
                           <Route path="dashboard" element={<InstructorDashboard />} />
                           <Route path="" element={<InstructorDashboard />} />
                           <Route path="create-course" element={<InstructorCreateCoursePage />} />
+                          <Route path="course/:id" element={<InstructorCourseManagement />} />
                         </Routes>
                       </ProtectedRoute>
                     }

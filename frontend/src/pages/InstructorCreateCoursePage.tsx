@@ -14,7 +14,6 @@ const InstructorCreateCoursePage: React.FC = () => {
     duration: '',
     description: '',
     level: '',
-    category: '',
     language: ''
   });
   const [error, setError] = React.useState<string | null>(null);
@@ -37,14 +36,15 @@ const InstructorCreateCoursePage: React.FC = () => {
       setError('Enter a valid price.');
       return;
     }
-    const categoryIdNum = parseInt(form.category, 10);
     try {
       await createCourse({
         title: form.title,
         description: form.description || undefined,
         price: priceNum,
         instructorId: user?.id ? Number(user.id) : undefined,
-        categoryId: Number.isNaN(categoryIdNum) ? undefined : categoryIdNum,
+        duration: form.duration || undefined,
+        level: form.level || undefined,
+        language: form.language || undefined,
       });
       setSuccess('Course created successfully!');
       setTimeout(() => navigate('/instructor/dashboard'), 800);
@@ -66,7 +66,6 @@ const InstructorCreateCoursePage: React.FC = () => {
             <TextField label="Duration" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g., 12 hours" />
             <TextField label="Description" multiline minRows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             <TextField label="Level" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} placeholder="Beginner / Intermediate / Advanced" />
-            <TextField label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g., Web Development" />
             <TextField label="Language" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} placeholder="e.g., English" />
             {error && <Typography color="error" variant="body2">{error}</Typography>}
             {success && <Typography color="success.main" variant="body2">{success}</Typography>}

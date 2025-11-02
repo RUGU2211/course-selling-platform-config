@@ -26,18 +26,20 @@ public class Course {
     @Column(name = "instructor_id")
     private Long instructorId;
 
+    private String duration;  // e.g., "12 hours", "3 weeks"
+
     @Transient
-    private Long categoryId;
+    private Integer enrollmentCount;  // Calculated field, not stored in DB
 
     public Course() {
     }
 
-    public Course(String title, String description, BigDecimal price, Long instructorId, Long categoryId) {
+    public Course(String title, String description, BigDecimal price, Long instructorId, String duration) {
         this.title = title;
         this.description = description;
         this.price = price;
         this.instructorId = instructorId;
-        this.categoryId = categoryId;
+        this.duration = duration;
     }
 
     public Long getId() {
@@ -80,11 +82,19 @@ public class Course {
         this.instructorId = instructorId;
     }
 
-    public Long getCategoryId() {
-        return categoryId;
+    public String getDuration() {
+        return duration;
     }
 
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
+    public void setDuration(String duration) {
+        this.duration = duration;
+    }
+
+    public Integer getEnrollmentCount() {
+        return enrollmentCount;
+    }
+
+    public void setEnrollmentCount(Integer enrollmentCount) {
+        this.enrollmentCount = enrollmentCount;
     }
 }

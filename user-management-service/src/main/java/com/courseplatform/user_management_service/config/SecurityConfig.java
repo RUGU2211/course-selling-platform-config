@@ -4,7 +4,6 @@ import com.courseplatform.user_management_service.util.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,14 +31,6 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Public endpoints that don't require authentication
-        String[] publicMatchers = new String[] {
-                "/api/users/**",
-                "/user-management-service/api/users/**",
-                "/h2-console/**",
-                "/actuator/**"
-        };
-
         http
                 // disable CSRF for APIs (enable selectively for browser forms)
                 .csrf(csrf -> csrf.disable())

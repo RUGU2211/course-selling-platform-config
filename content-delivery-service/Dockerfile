@@ -1,12 +1,13 @@
-# Use OpenJDK base image
-FROM openjdk:21-jdk
+# Build stage
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+RUN mvn -q -DskipTests package
 
+# Runtime stage
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-
-# Copy built jar from target (ensure you build with mvn package first)
-COPY target/*.jar app.jar
-
-# Expose correct port (change if your service runs on a different port)
+COPY --from=builder /build/target/*.jar app.jar
 EXPOSE 8087
-
 ENTRYPOINT ["java", "-jar", "app.jar"]

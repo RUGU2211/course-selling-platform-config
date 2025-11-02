@@ -28,7 +28,7 @@ const StudentDashboard: React.FC = () => {
         
         // Fetch course details for each enrollment
         const coursePromises = enrolls.map((e: any) => 
-          fetchCourseById(e.courseId).catch(() => null)
+          fetchCourseById(Number(e.courseId)).catch(() => null)
         );
         const courseData = await Promise.all(coursePromises);
         if (!mounted) return;
@@ -119,7 +119,7 @@ const StudentDashboard: React.FC = () => {
                       component={Link}
                       to={`/courses/${course.id}`}
                     >
-                      {course.completed ? 'View Certificate' : 'Continue Learning'}
+                      {course.completed ? 'Completed - View Course' : 'Continue Learning'}
                     </Button>
                   </Box>
                 ))

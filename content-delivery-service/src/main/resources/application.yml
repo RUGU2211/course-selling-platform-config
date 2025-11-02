@@ -5,3 +5,8 @@ spring:
     import: optional:configserver:http://course-platform-config:8888
   profiles:
     active: docker
+
+server:
+  port: 8087
+  servlet:
+    context-path: /content-delivery-service

@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/course-management-service/api/courses")
+@RequestMapping("/api/courses")
 public class CourseAnalyticsController {
 
     @Autowired

@@ -4,5 +4,6 @@ public enum ContentType {
     VIDEO,
     PDF,
     DOC,
-    IMAGE
+    IMAGE,
+    TEXT
 }

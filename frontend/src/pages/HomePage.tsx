@@ -36,31 +36,51 @@ const HomePage: React.FC = () => {
 
   const loadStats = React.useCallback(async () => {
     try {
-      const [courses, global] = await Promise.all([
-        fetchCourses().catch(() => [] as BackendCourse[]),
-        fetchGlobalRatingSummary().catch(() => ({ average: 0 } as any)),
+      // Fetch all stats in parallel
+      const [coursesResponse, ratingResponse, statsResponse] = await Promise.allSettled([
+        fetchCourses(),
+        fetchGlobalRatingSummary(),
+        apiFetch<any>(`/user-management-service/api/users/stats`),
       ]);
 
-      // Try to fetch platform stats (requires admin token). If 401, fall back to zeros for users/instructors.
+      // Extract courses count
+      let coursesCount = 0;
+      if (coursesResponse.status === 'fulfilled') {
+        coursesCount = Array.isArray(coursesResponse.value) ? coursesResponse.value.length : 0;
+      }
+
+      // Extract average rating
+      let avgRating = 0;
+      if (ratingResponse.status === 'fulfilled') {
+        avgRating = Number((ratingResponse.value as any)?.average || 0);
+      }
+
+      // Extract user stats from database
       let students = 0;
       let instructors = 0;
-      try {
-        const storedToken = localStorage.getItem('auth_token') || '';
-        const statsResp = await apiFetch<any>(`/user-management-service/api/users/stats`, {
-          headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : undefined,
-        });
-        const s = statsResp?.stats || {};
-        students = Number(s.totalStudents || 0);
-        instructors = Number(s.totalInstructors || 0);
-      } catch {}
+      if (statsResponse.status === 'fulfilled') {
+        const statsData = statsResponse.value;
+        if (statsData?.stats) {
+          students = Number(statsData.stats.totalStudents || 0);
+          instructors = Number(statsData.stats.totalInstructors || 0);
+        } else if (statsData?.totalStudents !== undefined) {
+          // Handle direct stats object
+          students = Number(statsData.totalStudents || 0);
+          instructors = Number(statsData.totalInstructors || 0);
+        }
+      }
 
+      // Update platform stats with real-time data
       setPlatformStats({
         students,
-        courses: courses.length,
+        courses: coursesCount,
         instructors,
-        avgRating: Number((global as any)?.average || 0),
+        avgRating,
       });
-    } catch {}
+    } catch (e) {
+      console.error('Failed to load stats:', e);
+      // Keep current stats on error instead of resetting to zero
+    }
   }, []);
 
   React.useEffect(() => {
@@ -69,9 +89,9 @@ const HomePage: React.FC = () => {
     })();
   }, [loadStats]);
 
-  // Realtime refresh for stats (poll + focus)
+  // Realtime refresh for stats every 5 seconds
   React.useEffect(() => {
-    const id = window.setInterval(() => { loadStats(); }, 20000);
+    const id = window.setInterval(() => { loadStats(); }, 5000);
     const onFocus = () => loadStats();
     window.addEventListener('focus', onFocus);
     return () => {
@@ -207,14 +227,6 @@ const HomePage: React.FC = () => {
                   >
                     {course.description || 'Explore this course to learn more about its content and objectives.'}
                   </Typography>
-                  <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                    <Chip
-                      label={course.categoryId ? `Category ${course.categoryId}` : 'General'}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  </Stack>
                   <Stack direction="row" alignItems="center" spacing={2}>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       <People fontSize="small" color="action" />
@@ -268,25 +280,25 @@ const HomePage: React.FC = () => {
               <Typography variant="h3" color="primary.main" fontWeight="bold">
                 {platformStats.students.toLocaleString()}
               </Typography>
-              <Typography variant="h6">Students</Typography>
+              <Typography variant="h6" color="text.secondary">Students</Typography>
             </Box>
             <Box>
               <Typography variant="h3" color="primary.main" fontWeight="bold">
                 {platformStats.courses.toLocaleString()}
               </Typography>
-              <Typography variant="h6">Courses</Typography>
+              <Typography variant="h6" color="text.secondary">Courses</Typography>
             </Box>
             <Box>
               <Typography variant="h3" color="primary.main" fontWeight="bold">
                 {platformStats.instructors.toLocaleString()}
               </Typography>
-              <Typography variant="h6">Instructors</Typography>
+              <Typography variant="h6" color="text.secondary">Instructors</Typography>
             </Box>
             <Box>
               <Typography variant="h3" color="primary.main" fontWeight="bold">
                 {platformStats.avgRating.toFixed(1)}
               </Typography>
-              <Typography variant="h6">Average Rating</Typography>
+              <Typography variant="h6" color="text.secondary">Average Rating</Typography>
             </Box>
           </Box>
         </Container>

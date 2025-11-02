@@ -2,18 +2,24 @@ package com.courseplatform.user_management_service.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.util.function.Function;
 import java.nio.charset.StandardCharsets;
+import javax.crypto.SecretKey;
 
 @Component
 public class JwtUtil {
 
     // Use a sufficiently long secret (>= 32 bytes for HS256)
     private String SECRET_KEY = "your-secure-key-should-be-at-least-32-chars-long-2025-10-20";
+    
+    // Get signing key
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
+    }
 
     // Extract username (email) from token
     public String getEmailFromToken(String token) {
@@ -46,8 +52,9 @@ public class JwtUtil {
 
     // Parse all claims
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .setSigningKey(SECRET_KEY.getBytes(StandardCharsets.UTF_8))
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
@@ -65,7 +72,7 @@ public class JwtUtil {
                 .claim("role", role)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))  // 10 hours expiration
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY.getBytes(StandardCharsets.UTF_8))
+                .signWith(getSigningKey())
                 .compact();
     }
 

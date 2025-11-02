@@ -1,222 +1,25 @@
-# Course Selling Platform - API Endpoints Documentation
+# Course Selling Platform - API Endpoints Reference
 
-## Postman Testing Guide 🚀
-
-### Quick Setup for Postman Testing
-
-#### 1. Import Environment Variables
-Create a new environment in Postman with these variables:
-
-| Variable | Initial Value | Current Value |
-|----------|--------------|---------------|
-| `base_url` | http://localhost:8765 | http://localhost:8765 |
-| `gateway_url` | http://localhost:8765 | http://localhost:8765 |
-| `frontend_url` | http://localhost:3000 | http://localhost:3000 |
-| `token` | | *(leave empty, will be set after login)* |
-| `user_id` | | *(leave empty, will be set after login)* |
-
-#### 2. Authentication Flow
-
-**Step 1: Register a New User**
-```
-POST {{base_url}}/user-management-service/api/users/register
-```
-**Body (raw JSON):**
-```json
-{
-  "username": "testuser",
-  "firstName": "Test",
-  "lastName": "User",
-  "email": "test@example.com",
-  "password": "Password123!",
-  "role": "STUDENT"
-}
-```
-**Save Response:** Copy the `token` from response → Set in environment variable `token`
-
-**Step 2: Login**
-```
-POST {{base_url}}/user-management-service/api/users/login
-```
-**Body (raw JSON):**
-```json
-{
-  "email": "test@example.com",
-  "password": "Password123!"
-}
-```
-**Save Response:** Copy the `token` → Update environment variable `token`
-
-#### 3. Setting Up Authorization Header
-
-Create a Pre-request Script in Postman:
-```javascript
-// This automatically adds the Authorization header if token exists
-if (pm.environment.get("token")) {
-    pm.request.headers.add({
-        key: 'Authorization',
-        value: 'Bearer ' + pm.environment.get("token")
-    });
-}
-```
-
-#### 4. Creating a Collection
-
-Organize your requests into these folders:
-
-```
-Course Platform APIs
-├── Authentication
-│   ├── Register User
-│   └── Login User
-├── User Management
-│   ├── Get Profile
-│   ├── Update Profile
-│   └── Get Dashboard
-├── Course Management
-│   ├── Get All Courses
-│   ├── Get Course by ID
-│   ├── Create Course (Requires Login)
-│   ├── Update Course (Requires Login)
-│   └── Delete Course (Requires Login)
-├── Enrollment
-│   ├── Enroll in Course (Requires Login)
-│   ├── Get My Enrollments (Requires Login)
-│   └── Update Progress (Requires Login)
-└── Content
-    ├── Get Course Content
-    ├── Upload Content (Requires Login)
-    └── Stream Content
-```
-
-### Testing Workflow
-
-#### Complete User Journey Test
-
-1. **Register** → Get JWT token
-2. **Login** → Verify token works
-3. **View Courses** → Browse available courses
-4. **Enroll in Course** → Enroll in a course
-5. **View Enrollments** → Check enrolled courses
-6. **Update Progress** → Track learning progress
-
-### Sample Postman Collection JSON
-
-```json
-{
-  "info": {
-    "name": "Course Selling Platform API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8765",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "Authentication",
-      "item": [
-        {
-          "name": "Register",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"STUDENT\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/user-management-service/api/users/register",
-              "host": ["{{base_url}}"],
-              "path": ["user-management-service", "api", "users", "register"]
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Important Notes for Testing
-
-1. **CORS**: If testing from browser-based Postman, ensure CORS is configured
-2. **Gateway**: All requests must go through the API Gateway (port 8765)
-3. **JWT Token**: Token expires after a set duration (check your config)
-4. **Database**: Ensure MySQL is running and databases are created
-5. **Services**: All microservices must be running for complete functionality
-
-### Testing Checklist ✅
-
-- [ ] Register a new user account
-- [ ] Login and receive JWT token
-- [ ] View list of all courses
-- [ ] Get details of a specific course
-- [ ] Create a new course (as instructor)
-- [ ] Update course details
-- [ ] Enroll in a course
-- [ ] View my enrollments
-- [ ] Get course content
-- [ ] Update enrollment progress
-
-### Error Handling
-
-Common error responses:
-
-**401 Unauthorized:**
-```json
-{
-  "error": "Unauthorized",
-  "message": "Invalid or expired token"
-}
-```
-
-**404 Not Found:**
-```json
-{
-  "error": "Not Found",
-  "message": "Resource not found"
-}
-```
-
-**400 Bad Request:**
-```json
-{
-  "error": "Bad Request",
-  "message": "Validation failed: email is required"
-}
-```
+## Base Configuration
+- **API Gateway**: `http://localhost:8765`
+- **Frontend**: `http://localhost:3000`
 
 ---
 
-## Base URL
-All API calls should be made through the API Gateway at: `http://localhost:8765`
+## 1. User Management Service
+**Base URL**: `/user-management-service/api/users`
 
-## Service Endpoints
+### Authentication Endpoints
 
-### 1. User Management Service
-**Base URL:** `http://localhost:8765/user-management-service/api/users`
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| POST | `/register` | Register a new user | `{ firstName, lastName, email, password, role }` |
+| POST | `/login` | Authenticate user | `{ email, password }` |
+| GET | `/profile/{id}` | Get user profile | None |
 
-#### 1.1 Register User
-- **Method:** POST
-- **Path:** `/user-management-service/api/users/register`
-- **Body:**
+### Example Registration
 ```json
 {
-  "username": "johndoe",
   "firstName": "John",
   "lastName": "Doe",
   "email": "john.doe@example.com",
@@ -225,10 +28,7 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
 }
 ```
 
-#### 1.2 Login User
-- **Method:** POST
-- **Path:** `/user-management-service/api/users/login`
-- **Body:**
+### Example Login
 ```json
 {
   "email": "john.doe@example.com",
@@ -236,120 +36,85 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
 }
 ```
 
-#### 1.3 Get User Profile by ID (Authenticated)
-- **Method:** GET
-- **Path:** `/user-management-service/api/users/profile/{id}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-
-#### 1.4 Update User Profile (Authenticated)
-- **Method:** PUT
-- **Path:** `/user-management-service/api/users/profile/{id}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
-```json
-{
-  "fullName": "Johnathan Doe",
-  "phone": "555-1234",
-  "bio": "Software developer and instructor",
-  "profileImage": "http://example.com/image.jpg"
-}
-```
-
-#### 1.5 Get User Dashboard (Enhanced with Inter-Service Communication)
-- **Method:** GET
-- **Path:** `/user-management-service/api/users/dashboard/{userId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Description:** Returns user dashboard with enrollments and available courses from other services
-
 ---
 
-### 2. Course Management Service
-**Base URL:** `http://localhost:8765/course-management-service/api/courses`
+## 2. Course Management Service
+**Base URL**: `/course-management-service/api/courses`
 
-#### 2.1 Get All Courses
-- **Method:** GET
-- **Path:** `/course-management-service/api/courses`
+### Course Endpoints
 
-#### 2.2 Get Specific Course by ID
-- **Method:** GET
-- **Path:** `/course-management-service/api/courses/{courseId}`
-- **Example:** `/course-management-service/api/courses/1`
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| GET | `/` | Get all courses | None |
+| GET | `/{id}` | Get course by ID | None |
+| POST | `/` | Create new course | `{ title, description, price, instructorId, duration?, level?, language? }` |
+| PUT | `/{id}` | Update course | `{ title, description, price, instructorId, duration?, level?, language? }` |
+| DELETE | `/{id}` | Delete course | None |
 
-#### 2.3 Create a New Course (Instructor Only)
-- **Method:** POST
-- **Path:** `/course-management-service/api/courses`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
+### Example Create Course
 ```json
 {
   "title": "Java Spring Boot Masterclass",
   "description": "Comprehensive course on Spring Boot development",
   "price": 79.99,
-  "duration": "40 hours",
-  "categoryId": 1,
-  "instructorId": 2
+  "instructorId": 2,
+  "duration": "12 hours",
+  "level": "Intermediate",
+  "language": "English"
 }
 ```
 
-#### 2.4 Update Course by ID
-- **Method:** PUT
-- **Path:** `/course-management-service/api/courses/{courseId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
+**Course Fields:**
+- `title` (required) - Course title
+- `description` (optional) - Course description
+- `price` (required) - Course price
+- `instructorId` (required) - ID of the instructor
+- `duration` (optional) - Course duration (e.g., "12 hours", "3 weeks")
+- `level` (optional) - Course level (e.g., "Beginner", "Intermediate", "Advanced")
+- `language` (optional) - Course language (e.g., "English", "Spanish")
+
+### Reviews & Ratings Endpoints
+
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| GET | `/reviews/summary` | Get global rating summary | None |
+| GET | `/reviews/course/{courseId}/summary` | Get course rating summary | None |
+| GET | `/reviews/course/{courseId}` | Get all reviews for a course | None |
+| POST | `/reviews` | Create a review | `{ courseId, userId, rating, comment }` |
+
+### Example Create Review
 ```json
 {
-  "title": "Updated Spring Boot Masterclass",
-  "description": "Updated course content",
-  "price": 89.99,
-  "duration": "45 hours",
-  "categoryId": 1,
-  "instructorId": 2
-}
-```
-
-#### 2.5 Delete Course by ID
-- **Method:** DELETE
-- **Path:** `/course-management-service/api/courses/{courseId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-
-#### 2.6 Search Courses (Optional)
-- **Method:** GET
-- **Path:** `/course-management-service/api/courses/search?query=java&category=programming`
-
-#### 2.7 Add Review to Course
-- **Method:** POST
-- **Path:** `/course-management-service/api/courses/{courseId}/reviews`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
-```json
-{
+  "courseId": 1,
+  "userId": 2,
   "rating": 5,
   "comment": "Excellent course, highly recommend!"
 }
 ```
 
-#### 2.8 Get Course Analytics (Enhanced with Inter-Service Communication)
-- **Method:** GET
-- **Path:** `/course-management-service/api/courses/analytics/{courseId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Description:** Returns course analytics including enrollments from enrollment service
-
-#### 2.9 Get Instructor Courses (Enhanced with Inter-Service Communication)
-- **Method:** GET
-- **Path:** `/course-management-service/api/courses/instructor/{instructorId}/courses`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Description:** Returns instructor profile and courses with user service integration
-
 ---
 
-### 3. Enrollment Service
-**Base URL:** `http://localhost:8765/enrollment-service/api/enrollments`
+## 3. Enrollment Service
+**Base URL**: `/enrollment-service/api/enrollments`
 
-#### 3.1 Enroll in a Course
-- **Method:** POST
-- **Path:** `/enrollment-service/api/enrollments`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
+### Enrollment Endpoints
+
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| POST | `/` | Enroll in a course | `{ studentId, courseId }` |
+| GET | `/student/{studentId}` | Get student enrollments | None |
+| GET | `/course/{courseId}` | Get course enrollments | None |
+| GET | `/{id}` | Get enrollment by ID | None |
+| PUT | `/{id}/progress` | Update progress | `{ progress }` |
+| PUT | `/{id}/complete` | Mark as complete | `{ completed }` |
+| PUT | `/{id}/stage1` | Mark stage 1 as complete | `{ completed }` |
+| PUT | `/{id}/stage2` | Mark stage 2 as complete | `{ completed }` |
+| PUT | `/{id}/current-stage` | Update current stage | `{ stage }` |
+| DELETE | `/{id}` | Unenroll from course | None |
+| GET | `/student/{studentId}/stats` | Get student enrollment statistics | None |
+| GET | `/stats` | Get global enrollment statistics | None |
+
+### Example Enroll
 ```json
 {
   "studentId": 1,
@@ -357,111 +122,335 @@ All API calls should be made through the API Gateway at: `http://localhost:8765`
 }
 ```
 
-#### 3.2 Get My Enrollments (Authenticated Student)
-- **Method:** GET
-- **Path:** `/enrollment-service/api/enrollments/student/{studentId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Example:** `/enrollment-service/api/enrollments/student/1`
-
-#### 3.3 Update Enrollment Progress
-- **Method:** PUT
-- **Path:** `/enrollment-service/api/enrollments/{enrollmentId}/progress`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Body:**
+### Example Update Progress
 ```json
 {
-  "progressPercentage": 75,
-  "lastAccessedContentId": 555
+  "progress": 75
 }
 ```
 
-#### 3.4 Mark Course Completion
-- **Method:** POST
-- **Path:** `/enrollment-service/api/enrollments/{enrollmentId}/complete`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+### Example Complete Enrollment
+```json
+{
+  "completed": true
+}
+```
 
-#### 3.5 Enroll with Validation (Enhanced Inter-Service Workflow)
-- **Method:** POST
-- **Path:** `/enrollment-service/api/enrollments/workflow/enroll`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Parameters:** `studentId`, `courseId`
-- **Description:** Validates student, course, and payment before enrollment
+### Example Update Stage 1
+```json
+{
+  "completed": true
+}
+```
 
-#### 3.6 Get Student Enrollment Summary (Enhanced Inter-Service Communication)
-- **Method:** GET
-- **Path:** `/enrollment-service/api/enrollments/workflow/student/{studentId}/summary`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
-- **Description:** Returns comprehensive student summary with profile and payment data
+### Example Update Stage 2
+```json
+{
+  "completed": true
+}
+```
+
+### Example Update Current Stage
+```json
+{
+  "stage": 1
+}
+```
+
+**Stage Values:**
+- `0` - Not started
+- `1` - Stage 1 completed (progress: 50%)
+- `2` - Stage 2 completed (progress: 100%, course completed)
+- `3` - Course fully completed (set automatically when both stages complete)
+
+### Example Enrollment Response
+```json
+{
+  "id": 1,
+  "studentId": 1,
+  "courseId": 101,
+  "progress": 50,
+  "completed": false,
+  "stage1Completed": true,
+  "stage2Completed": false,
+  "currentStage": 1,
+  "enrolledAt": "2024-01-15T10:30:00"
+}
+```
+
+### Example Enrollment Stats Response
+```json
+{
+  "totalEnrollments": 150,
+  "completedCourses": 45,
+  "averageProgress": 65.5,
+  "recentEnrollments": [
+    {
+      "id": 1,
+      "studentId": 1,
+      "courseId": 101,
+      "progress": 75,
+      "completed": false,
+      "stage1Completed": true,
+      "stage2Completed": false,
+      "currentStage": 1,
+      "enrolledAt": "2024-01-15T10:30:00"
+    }
+  ]
+}
+```
+
+**Enrollment Fields:**
+- `progress` - Percentage (0-100), automatically updated by stages
+- `stage1Completed` - Boolean, true when stage 1 is complete (progress: 50%)
+- `stage2Completed` - Boolean, true when stage 2 is complete (progress: 100%, completed: true)
+- `currentStage` - Integer (0=not started, 1=stage1, 2=stage2, 3=completed)
+- `completed` - Boolean, true when both stages are complete
 
 ---
 
-### 4. Content Delivery Service
-**Base URL:** `http://localhost:8765/content-delivery-service/api/content`
+## 4. Content Delivery Service
+**Base URL**: `/content-delivery-service/api/content`
 
-#### 4.1 Upload Course Content (Instructor Only)
-- **Method:** POST
-- **Path:** `/content-delivery-service/api/content/{courseId}/upload`
-- **Headers:**
-  - `Authorization: Bearer <JWT_TOKEN>`
-  - `Content-Type: multipart/form-data`
-- **Body:** Form data with fields:
-  - `file`: (Video or content file upload)
-  - `title`: "Lesson 1: Introduction"
-  - `description`: "Course introduction video"
+### Content Endpoints
 
-#### 4.2 Get All Content for a Course
-- **Method:** GET
-- **Path:** `/content-delivery-service/api/content/course/{courseId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>` (if protected)
-- **Example:** `/content-delivery-service/api/content/course/101`
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| GET | `/` | Get all content | None |
+| GET | `/{id}` | Get content by ID | None |
+| GET | `/course/{courseId}` | Get content for a course | None |
+| POST | `/` | Add new content | `{ courseId, type, title, url, body? }` |
+| DELETE | `/{id}` | Delete content | None |
 
-#### 4.3 Stream Video Content
-- **Method:** GET
-- **Path:** `/content-delivery-service/api/content/stream/{contentId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>` (if protected)
+### Content Types
+- `VIDEO` - Video content
+- `PDF` - PDF document
+- `DOC` - Document
+- `IMAGE` - Image
+- `TEXT` - Text content (uses `body` field)
 
-#### 4.4 Delete Course Content (Instructor Only)
-- **Method:** DELETE
-- **Path:** `/content-delivery-service/api/content/{contentId}`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+### Example Add Content (Video/PDF/DOC/IMAGE)
+```json
+{
+  "courseId": 101,
+  "type": "VIDEO",
+  "title": "Introduction Video",
+  "url": "https://example.com/video.mp4"
+}
+```
+
+### Example Add Content (TEXT)
+```json
+{
+  "courseId": 101,
+  "type": "TEXT",
+  "title": "Course Introduction",
+  "url": "",
+  "body": "This course covers fundamentals of..."
+}
+```
+
+### Content Access Logs
+**Base URL**: `/content-delivery-service/api/logs`
+
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| POST | `/` | Log content access | `{ userId, content: { contentId }, action }` |
+| GET | `/` | Get all logs | None |
+| GET | `/user/{userId}` | Get logs for user | None |
+
+### Example Log Access
+```json
+{
+  "userId": 1,
+  "content": { "contentId": 5 },
+  "action": "STREAM"
+}
+```
 
 ---
 
-## Service Discovery & Health Checks
+## Testing with Postman
 
-### Eureka Server
-- **URL:** `http://localhost:8761`
-- **Purpose:** Service discovery and registration
+### Setup
+1. Import the collection or manually set base URL to: `http://localhost:8765`
+2. Use endpoint paths as shown above
 
-### Health Check Endpoints
-All services expose health check endpoints at `/actuator/health`:
-- User Service: `http://localhost:8082/actuator/health`
-- Course Service: `http://localhost:8083/actuator/health`
-- Enrollment Service: `http://localhost:8084/enrollment-service/actuator/health`
-- Content Service: `http://localhost:8087/actuator/health`
-- API Gateway: `http://localhost:8765/actuator/health`
+### Quick Test Sequence
 
-## Frontend Application
-- **URL:** `http://localhost:3000`
-- **Purpose:** React-based frontend application
-
-## Database
-- **MySQL:** `localhost:3307` (Docker Compose) or `localhost:3306` (K8s)
-- **Databases:** 
-  - `users_db`
-  - `courses_db`
-  - `enrollment_db`
-  - `content_db`
-
-
-## Authentication
-All protected endpoints require a JWT token in the Authorization header:
+#### 1. Register User
 ```
-Authorization: Bearer <JWT_TOKEN>
+POST http://localhost:8765/user-management-service/api/users/register
+Content-Type: application/json
+
+{
+  "firstName": "Test",
+  "lastName": "User",
+  "email": "test@example.com",
+  "password": "password123",
+  "role": "STUDENT"
+}
 ```
 
-## CORS Configuration
-The API Gateway is configured to allow CORS from:
-- `http://localhost:3000`
-- `http://localhost:5173`
-- `http://localhost:5174`
+#### 2. Create Course (Instructor)
+```
+POST http://localhost:8765/course-management-service/api/courses
+Content-Type: application/json
+
+{
+  "title": "Test Course",
+  "description": "A test course",
+  "price": 99.99,
+  "instructorId": 1,
+  "duration": "10 hours",
+  "level": "Beginner",
+  "language": "English"
+}
+```
+
+#### 3. Enroll in Course
+```
+POST http://localhost:8765/enrollment-service/api/enrollments
+Content-Type: application/json
+
+{
+  "studentId": 1,
+  "courseId": 1
+}
+```
+
+#### 4. Add Content
+```
+POST http://localhost:8765/content-delivery-service/api/content
+Content-Type: application/json
+
+{
+  "courseId": 1,
+  "type": "TEXT",
+  "title": "Introduction",
+  "url": "",
+  "body": "Welcome to the course!"
+}
+```
+
+#### 5. Add Review
+```
+POST http://localhost:8765/course-management-service/api/reviews
+Content-Type: application/json
+
+{
+  "courseId": 1,
+  "userId": 1,
+  "rating": 5,
+  "comment": "Great course!"
+}
+```
+
+---
+
+## Frontend API Client Usage
+
+The frontend uses a centralized API client in `frontend/src/services/api.ts`:
+
+### Key Functions
+
+#### Courses
+- `fetchCourses()` - Get all courses
+- `fetchCourseById(id)` - Get course by ID
+- `createCourse(course)` - Create new course
+- `updateCourse(id, course)` - Update course
+- `deleteCourse(id)` - Delete course
+
+#### Reviews
+- `fetchCourseRatingSummary(courseId)` - Get course rating summary
+- `fetchGlobalRatingSummary()` - Get global rating summary
+- `fetchCourseReviews(courseId)` - Get course reviews
+- `createReview(review)` - Create review
+
+#### Authentication
+- `loginApi(email, password)` - Login
+- `registerApi(payload)` - Register
+- `getUserProfile(userId)` - Get user profile
+
+#### Enrollment
+- `enrollInCourse(enrollment)` - Enroll in course
+- `getEnrollmentById(enrollmentId)` - Get enrollment by ID
+- `getStudentEnrollments(studentId)` - Get student enrollments
+- `getCourseEnrollments(courseId)` - Get course enrollments
+- `updateEnrollmentProgress(enrollmentId, progress)` - Update progress
+- `updateEnrollmentCompletion(enrollmentId, completion)` - Mark enrollment as complete
+- `updateEnrollmentStage1(enrollmentId, completed)` - Mark stage 1 as complete
+- `updateEnrollmentStage2(enrollmentId, completed)` - Mark stage 2 as complete
+- `updateEnrollmentCurrentStage(enrollmentId, stage)` - Update current stage
+- `unenrollFromCourse(enrollmentId)` - Unenroll from course
+- `getEnrollmentStats(studentId?)` - Get enrollment statistics (optional studentId)
+
+#### Content
+- `fetchContentByCourse(courseId)` - Get course content
+- `addContentItem(payload)` - Add content
+- `deleteContentItem(contentId)` - Delete content
+- `logContentAccess(userId, contentId, action)` - Log access
+
+---
+
+## 5. User Management Service - Additional Endpoints
+
+### User Statistics Endpoint
+
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| GET | `/api/users/stats` | Get platform statistics (students, instructors, courses) | None |
+
+**Example Response:**
+```json
+{
+  "students": 150,
+  "instructors": 25,
+  "courses": 50
+}
+```
+
+**Note:** This endpoint is publicly accessible (no authentication required) for displaying platform statistics on the homepage.
+
+---
+
+## Notes
+
+### Service Communication
+- All endpoints go through API Gateway at port 8765
+- **Docker Containers**: API Gateway uses Eureka service discovery with `lb://` protocol for load-balanced routing
+- **Container Names**: Services communicate using Docker container names:
+  - Eureka: `course-platform-eureka:8761`
+  - Config Server: `course-platform-config:8888`
+  - MySQL: `course-platform-mysql:3306`
+  - API Gateway: `course-platform-api-gateway:8765`
+
+### Service Discovery
+- Services use Eureka for service discovery
+- API Gateway routes use `lb://{service-name}` protocol (e.g., `lb://user-management-service`)
+- Service names must match Eureka registration names exactly
+
+### Configuration
+- Config Server provides centralized configuration
+- MySQL databases are separate per service (users_db, courses_db, enrollment_db, content_db)
+
+### Course Management
+- **Removed**: `categoryId` field (category table removed)
+- **Added**: `duration`, `level`, `language` fields for course creation
+- Courses display enrollment count dynamically
+
+### Enrollment System
+- **Two-Stage Completion**: Courses have two stages (stage1, stage2) before completion
+- **Stage Tracking**: `currentStage` field tracks progress (0=not started, 1=stage1, 2=stage2, 3=completed)
+- **Progress**: Automatically updated based on stages (50% at stage1, 100% at stage2)
+- **Removed**: `certificateUrl` field (no longer generated)
+
+### Content Types
+- Content types include VIDEO, PDF, DOC, IMAGE, and TEXT
+- TEXT type uses `body` field instead of `url` field
+- Content access logs are tracked in real-time
+
+### Database Changes
+- Removed `category` and `course_content` tables from courses_db
+- Removed `bio`, `phone`, `profile_image` columns from users table
+- Removed `certificate_url` column from enrollments table

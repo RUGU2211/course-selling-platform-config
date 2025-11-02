@@ -1,13 +1,44 @@
 package com.example.api_gateway.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-/**
- * CORS is configured via spring.cloud.gateway.globalcors in application.yml.
- * This config class intentionally does not register a CorsWebFilter bean
- * to avoid duplicate Access-Control-Allow-Origin headers.
- */
+import java.util.Arrays;
+
 @Configuration
 public class CorsConfig {
-    // Intentionally empty: use YAML-based global CORS config
+    
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        
+        // Allow all origins for local development (can be restricted in production)
+        corsConfig.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175"
+        ));
+        
+        // Allow all HTTP methods
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        // Allow all headers
+        corsConfig.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Allow credentials
+        corsConfig.setAllowCredentials(true);
+        
+        // Cache preflight requests for 1 hour
+        corsConfig.setMaxAge(3600L);
+        
+        // Apply CORS configuration to all paths
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+        
+        return new CorsWebFilter(source);
+    }
 }

@@ -56,6 +56,26 @@ services:
       retries: 10
       start_period: 240s
 
+  # Actuator Service
+  actuator:
+    build: ./actuator
+    container_name: course-platform-actuator
+    ports:
+      - "8081:8081"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
   # User Management Service
   user-service:
@@ -80,7 +100,7 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
       - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8082/user-management-service/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -110,7 +130,7 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
       - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8083/course-management-service/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -168,7 +188,7 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
       - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8087/content-delivery-service/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -181,21 +201,17 @@ services:
     ports:
       - "8765:8765"
     depends_on:
-      user-service:
-        condition: service_healthy
-      course-service:
-        condition: service_healthy
-      enrollment-service:
-        condition: service_healthy
-      content-service:
-        condition: service_healthy
       eureka-server:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
     networks:
       - microservices-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://course-platform-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=api-gateway
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://course-platform-config:8888
       - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED=true
       - SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID=true
     healthcheck:
@@ -217,7 +233,9 @@ services:
     networks:
       - microservices-network
     environment:
-      - VITE_API_URL=http://localhost:8765
+      # Frontend uses nginx proxy to api-gateway, so API URL is relative
+      - VITE_API_URL=/api
+      - API_BASE=/api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s

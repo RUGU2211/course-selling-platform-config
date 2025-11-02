@@ -2,13 +2,14 @@ import React from 'react';
 import { Box, Typography, Container, Card, CardContent, CardMedia, Button, Rating, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { People, AccessTime } from '@mui/icons-material';
-import { fetchCourses, fetchCourseRatingSummary } from '../services/api';
+import { fetchCourses, fetchCourseRatingSummary, getCourseEnrollments } from '../services/api';
 
 const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [courses, setCourses] = React.useState<Array<any>>([]);
   const [ratingMap, setRatingMap] = React.useState<Record<number, { avg: number; count: number }>>({});
+  const [enrollmentCountMap, setEnrollmentCountMap] = React.useState<Record<number, number>>({});
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -19,7 +20,7 @@ const CoursesPage: React.FC = () => {
         const list = await fetchCourses();
         if (!mounted) return;
         setCourses(list);
-        // Fetch rating summary for each course
+        // Fetch rating summary and enrollment count for each course
         const summaries = await Promise.all(list.map(async (c: any) => {
           try {
             const s = await fetchCourseRatingSummary(Number(c.id));
@@ -31,6 +32,19 @@ const CoursesPage: React.FC = () => {
         const map: Record<number, { avg: number; count: number }> = {};
         summaries.forEach(s => { map[s.id] = { avg: s.avg, count: s.count }; });
         if (mounted) setRatingMap(map);
+        
+        // Fetch enrollment counts
+        const enrollmentCounts = await Promise.all(list.map(async (c: any) => {
+          try {
+            const enrollments = await getCourseEnrollments(Number(c.id));
+            return { id: Number(c.id), count: enrollments?.length || 0 };
+          } catch {
+            return { id: Number(c.id), count: 0 };
+          }
+        }));
+        const countMap: Record<number, number> = {};
+        enrollmentCounts.forEach(ec => { countMap[ec.id] = ec.count; });
+        if (mounted) setEnrollmentCountMap(countMap);
       } catch (e: any) {
         setError(e?.message || String(e));
       } finally {
@@ -107,7 +121,7 @@ const CoursesPage: React.FC = () => {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <People fontSize="small" color="action" />
                     <Typography variant="body2" color="text.secondary">
-                      {course.students || 'N/A'} students
+                      {enrollmentCountMap[course.id] || 0} enrolled
                     </Typography>
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={0.5}>

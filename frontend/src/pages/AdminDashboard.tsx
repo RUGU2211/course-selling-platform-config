@@ -1,12 +1,17 @@
 import React from 'react';
-import { Box, Typography, Container, Card, CardContent, Button } from '@mui/material';
+import { Box, Typography, Container, Card, CardContent, Button, LinearProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { getEnrollmentStats } from '../services/api';
+import { EnrollmentStats } from '../services/api';
 
 const AdminDashboard: React.FC = () => {
+  const [enrollmentStats, setEnrollmentStats] = React.useState<EnrollmentStats | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  
   const platformStats = {
     totalUsers: 500,
     totalCourses: 120,
-    totalEnrollments: 800,
+    totalEnrollments: enrollmentStats?.totalEnrollments || 0,
     totalRevenue: 50000,
     activeInstructors: 25,
   };
@@ -16,6 +21,30 @@ const AdminDashboard: React.FC = () => {
     { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Instructor', joinDate: '2024-01-14' },
     { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Student', joinDate: '2024-01-13' },
   ];
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const stats = await getEnrollmentStats();
+        if (mounted) {
+          setEnrollmentStats(stats);
+        }
+      } catch (error) {
+        console.error('Failed to load enrollment stats:', error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      getEnrollmentStats().then(stats => setEnrollmentStats(stats)).catch(console.error);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -49,7 +78,7 @@ const AdminDashboard: React.FC = () => {
                 </Box>
                 <Box>
                   <Typography variant="h4" color="primary.main" fontWeight="bold">
-                    {platformStats.totalEnrollments}
+                    {enrollmentStats?.totalEnrollments || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Total Enrollments
@@ -96,21 +125,41 @@ const AdminDashboard: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h5" component="h2" gutterBottom>
-                Recent Users
+                Enrollment Statistics
               </Typography>
-              {recentUsers.map((user) => (
-                <Box key={user.id} sx={{ mb: 2, p: 2, border: '1px solid #eee', borderRadius: '8px' }}>
-                  <Typography variant="h6">
-                    {user.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user.email} • {user.role}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Joined: {user.joinDate}
-                  </Typography>
+              {enrollmentStats && (
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2">Average Progress</Typography>
+                      <Typography variant="body2">{enrollmentStats.averageProgress.toFixed(1)}%</Typography>
+                    </Box>
+                    <LinearProgress variant="determinate" value={enrollmentStats.averageProgress} />
+                  </Box>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Completed Courses: {enrollmentStats.completedCourses} / {enrollmentStats.totalEnrollments}
+                    </Typography>
+                  </Box>
+                  {enrollmentStats.recentEnrollments && enrollmentStats.recentEnrollments.length > 0 && (
+                    <>
+                      <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                        Recent Enrollments
+                      </Typography>
+                      {enrollmentStats.recentEnrollments.slice(0, 5).map((enrollment: any) => (
+                        <Box key={enrollment.id} sx={{ mb: 1, p: 1, border: '1px solid #eee', borderRadius: '4px' }}>
+                          <Typography variant="body2">
+                            Course #{enrollment.courseId} • Student #{enrollment.studentId}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Progress: {enrollment.progress}% • {enrollment.completed ? 'Completed' : 'In Progress'}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </>
+                  )}
                 </Box>
-              ))}
+              )}
             </CardContent>
           </Card>
         </Box>

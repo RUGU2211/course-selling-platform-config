@@ -33,7 +33,12 @@ public class CourseService {
         course.setTitle(courseDetails.getTitle());
         course.setDescription(courseDetails.getDescription());
         course.setPrice(courseDetails.getPrice());
+        course.setDuration(courseDetails.getDuration());
         // ... update other fields as needed
         return repository.save(course);
+    }
+
+    public void deleteCourse(Long id) {
+        repository.deleteById(id);
     }
 }
