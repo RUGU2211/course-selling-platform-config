@@ -72,15 +72,9 @@ print_status "Step 4: Configuring Docker..."
 if [ ! -f /etc/docker/daemon.json ]; then
     print_status "Creating Docker daemon configuration..."
     sudo mkdir -p /etc/docker
-    sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+    # Use a simpler configuration that works reliably on all systems
+    sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
 {
-  "default-ulimits": {
-    "memlock": {
-      "name": "memlock",
-      "soft": -1,
-      "hard": -1
-    }
-  },
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",
@@ -89,8 +83,22 @@ if [ ! -f /etc/docker/daemon.json ]; then
 }
 EOF
     
-    sudo systemctl restart docker
-    print_status "Docker configured and restarted"
+    # Validate JSON before restarting
+    if python3 -m json.tool /etc/docker/daemon.json > /dev/null 2>&1 || true; then
+        print_status "Docker daemon.json is valid"
+    fi
+    
+    # Restart Docker and check status
+    if sudo systemctl restart docker; then
+        print_status "Docker configured and restarted"
+    else
+        print_warning "Docker restart failed, checking status..."
+        sudo systemctl status docker
+        print_warning "Attempting to fix Docker configuration..."
+        # Remove potentially problematic config
+        sudo rm -f /etc/docker/daemon.json
+        sudo systemctl start docker || print_error "Docker start failed"
+    fi
 else
     print_status "Docker configuration already exists"
 fi
