@@ -48,13 +48,13 @@ services:
     networks:
       - microservices-network
     environment:
-      - SPRING_PROFILES_ACTIVE=git
+      - SPRING_PROFILES_ACTIVE=native
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 240s
+      start_period: 60s
 
   # Actuator Service
   actuator:
