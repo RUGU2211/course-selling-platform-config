@@ -15,12 +15,12 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         
-        // Allow all origins for local development (can be restricted in production)
-        corsConfig.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:5175"
+        // Allow all origins for local development and EC2 deployment
+        corsConfig.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:*",
+            "http://*.amazonaws.com:*",
+            "http://*.compute.amazonaws.com:*",
+            "http://*.ec2.internal:*"
         ));
         
         // Allow all HTTP methods
