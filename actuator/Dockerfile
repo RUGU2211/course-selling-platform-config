@@ -1,17 +1,14 @@
-# Use an official OpenJDK image as a parent image
-FROM openjdk:21-jdk
+# Build stage
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+RUN mvn -q -DskipTests package
 
-# Install curl for health checks
+# Runtime stage
+FROM eclipse-temurin:21-jre
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Set the working directory inside the container
 WORKDIR /app
-
-# Copy the packaged jar file into the container
-COPY target/*.jar app.jar
-
-# Expose the port the actuator service runs on
+COPY --from=builder /build/target/*.jar app.jar
 EXPOSE 8081
-
-# Run the jar file
 ENTRYPOINT ["java", "-jar", "app.jar"]
