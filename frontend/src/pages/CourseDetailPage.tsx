@@ -1,7 +1,7 @@
 import React from 'react';
-import { Box, Typography, Container, Button, Card, CardContent, Rating, Stack, Link as MuiLink, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert, MenuItem, Select, FormControl, InputLabel, IconButton, LinearProgress } from '@mui/material';
+import { Box, Typography, Container, Button, Card, CardContent, Rating, Stack, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert, MenuItem, Select, FormControl, InputLabel, IconButton, LinearProgress } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchCourseById, fetchCourseRatingSummary, fetchContentByCourse, logContentAccess, fetchCourseReviews, createReview, enrollInCourse, getStudentEnrollments, ContentItem, addContentItem, deleteContentItem, updateEnrollmentProgress, updateEnrollmentCompletion, getCourseEnrollments, getEnrollmentById, updateEnrollmentStage1, updateEnrollmentStage2, updateEnrollmentCurrentStage } from '../services/api';
+import { fetchCourseById, fetchCourseRatingSummary, fetchContentByCourse, logContentAccess, fetchCourseReviews, createReview, enrollInCourse, getStudentEnrollments, ContentItem, addContentItem, deleteContentItem, updateEnrollmentProgress, updateEnrollmentCompletion, getCourseEnrollments, updateEnrollmentStage1, updateEnrollmentStage2, updateEnrollmentCurrentStage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -300,7 +300,7 @@ const CourseDetailPage: React.FC = () => {
         
         if (newProgress > currentProgress) {
           try {
-            await updateEnrollmentProgress(currentEnrollment.id, newProgress);
+            await updateEnrollmentProgress(currentEnrollment.id, { progress: newProgress });
             // Mark as completed if progress reaches 100
             if (newProgress >= 100 && !currentEnrollment.completed) {
               await updateEnrollmentCompletion(currentEnrollment.id, true);

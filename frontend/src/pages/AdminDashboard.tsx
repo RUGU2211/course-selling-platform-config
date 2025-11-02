@@ -6,7 +6,6 @@ import { EnrollmentStats } from '../services/api';
 
 const AdminDashboard: React.FC = () => {
   const [enrollmentStats, setEnrollmentStats] = React.useState<EnrollmentStats | null>(null);
-  const [loading, setLoading] = React.useState(true);
   
   const platformStats = {
     totalUsers: 500,
@@ -15,12 +14,6 @@ const AdminDashboard: React.FC = () => {
     totalRevenue: 50000,
     activeInstructors: 25,
   };
-
-  const recentUsers = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Student', joinDate: '2024-01-15' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Instructor', joinDate: '2024-01-14' },
-    { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Student', joinDate: '2024-01-13' },
-  ];
 
   React.useEffect(() => {
     let mounted = true;
@@ -32,8 +25,6 @@ const AdminDashboard: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to load enrollment stats:', error);
-      } finally {
-        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };

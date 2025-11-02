@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   CardMedia,
-  Chip,
   Stack,
 } from '@mui/material';
 import {
