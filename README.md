@@ -168,6 +168,64 @@ All services expose health endpoints at `/actuator/health`:
 - **Containerization:** Docker, Docker Compose
 - **CI/CD:** Jenkins
 
+## AWS EC2 Deployment
+
+### Quick Deploy on AWS EC2 (Free Tier)
+
+**📖 See [AWS_EC2_DEPLOYMENT.md](AWS_EC2_DEPLOYMENT.md) for complete guide!**
+
+#### Prerequisites
+- AWS Free Tier Account
+- EC2 instance with Docker & Docker Compose installed
+- Security group configured with ports: 22, 80, 443, 3000, 8761, 8765, 8888, 8082-8087
+
+#### Automated Deployment
+
+**Option 1: Use the automated script**
+```bash
+# Clone repository
+git clone https://github.com/RUGU2211/course-selling-platf.git
+cd course-selling-platf
+
+# Make script executable
+chmod +x deploy-ec2.sh
+
+# Run deployment script
+./deploy-ec2.sh
+```
+
+**Option 2: Manual deployment**
+```bash
+# Clone repository
+git clone https://github.com/RUGU2211/course-selling-platf.git
+cd course-selling-platf
+
+# Create swap space (for 1GB RAM instances)
+sudo dd if=/dev/zero of=/swapfile bs=128M count=16
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Start all services
+docker-compose up -d
+```
+
+#### Access Your Application
+
+After deployment (wait 10-15 minutes for first build):
+- Frontend: `http://YOUR_EC2_PUBLIC_IP:3000`
+- API Gateway: `http://YOUR_EC2_PUBLIC_IP:8765`
+- Eureka Dashboard: `http://YOUR_EC2_PUBLIC_IP:8761`
+
+#### Deployment Notes
+
+- **First build takes 10-15 minutes** (downloading images & building services)
+- **Memory**: 1GB RAM (t2.micro) requires swap space
+- **Storage**: Uses ~10GB for Docker images and data
+- **Monitor logs**: `docker-compose logs -f`
+
+For detailed instructions, see [AWS_EC2_DEPLOYMENT.md](AWS_EC2_DEPLOYMENT.md)
+
 ## Project Structure
 
 ```
@@ -183,6 +241,8 @@ course-selling-platform/
 ├── k8s/                      # Kubernetes manifests
 ├── docker/                    # Docker configurations
 ├── docker-compose.yml         # Docker Compose setup
+├── deploy-ec2.sh              # EC2 deployment script
+├── AWS_EC2_DEPLOYMENT.md      # EC2 deployment guide
 └── API_ENDPOINTS.md          # API documentation
 ```
 
