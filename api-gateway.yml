@@ -23,38 +23,33 @@ spring:
             maxAge: 3600
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_FIRST
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       routes:
+        # Use service discovery (lb://) for services registered in Eureka
         - id: user-management-service
           uri: lb://user-management-service
           predicates:
-            - Path=/user-management-service/api/users/**
+            - Path=/user-management-service/**
           filters:
             - RemoveResponseHeader=Access-Control-Allow-Origin
 
         - id: course-management-service
           uri: lb://course-management-service
           predicates:
-            - Path=/course-management-service/api/courses/**
+            - Path=/course-management-service/**
 
         - id: enrollment-service
           uri: lb://enrollmentservice
           predicates:
-            - Path=/enrollment-service/api/enrollments/**
-
-        - id: payment-service
-          uri: lb://payment-service
-          predicates:
-            - Path=/payment-service/api/payments/**
-
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/notification-service/api/notifications/**
+            - Path=/enrollment-service/**
 
         - id: content-delivery-service
           uri: lb://content-delivery-service
           predicates:
-            - Path=/content-delivery-service/api/content/**
+            - Path=/content-delivery-service/**
 
 eureka:
   client:
