@@ -4,6 +4,16 @@
 
 set -e
 
+# Get the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# If run from k8s directory, go to parent; if run from root, stay in root
+if [[ "$SCRIPT_DIR" == *"/k8s" ]]; then
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    PROJECT_ROOT="$SCRIPT_DIR"
+fi
+
+K8S_DIR="${PROJECT_ROOT}/k8s"
 DOCKERHUB_USER="${DOCKERHUB_USER:-rugved2211}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 NAMESPACE="course-plat"
@@ -14,6 +24,7 @@ echo "=========================================="
 echo "Docker Hub User: ${DOCKERHUB_USER}"
 echo "Image Tag: ${IMAGE_TAG}"
 echo "Namespace: ${NAMESPACE}"
+echo "K8s Directory: ${K8S_DIR}"
 echo ""
 
 # Check if Minikube is running
@@ -56,21 +67,22 @@ fi
 # Process and apply Kubernetes manifests
 echo ""
 echo "Processing Kubernetes manifests..."
-mkdir -p k8s-processed
+K8S_PROCESSED_DIR="${K8S_DIR}/k8s-processed"
+mkdir -p "${K8S_PROCESSED_DIR}"
 
-for manifest in k8s/*.yaml; do
+for manifest in "${K8S_DIR}"/*.yaml; do
     if [ -f "$manifest" ]; then
         filename=$(basename "$manifest")
         
-        # Skip if it's a setup/deploy script
-        if [[ "$filename" == *.sh ]]; then
+        # Skip if it's a setup/deploy script or already processed
+        if [[ "$filename" == *.sh ]] || [[ "$filename" == *"processed"* ]]; then
             continue
         fi
         
         echo "Processing $filename..."
         
         # Replace placeholders
-        sed "s|DOCKERHUB_USER|${DOCKERHUB_USER}|g; s|IMAGE_TAG|${IMAGE_TAG}|g" "$manifest" > "k8s-processed/$filename"
+        sed "s|DOCKERHUB_USER|${DOCKERHUB_USER}|g; s|IMAGE_TAG|${IMAGE_TAG}|g" "$manifest" > "${K8S_PROCESSED_DIR}/$filename"
     fi
 done
 
@@ -80,48 +92,48 @@ echo "Applying Kubernetes manifests..."
 
 # 1. MySQL (database)
 echo "1. Deploying MySQL..."
-kubectl apply -f k8s-processed/mysql.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/mysql.yaml" -n ${NAMESPACE}
 
 # 2. Eureka Server (service discovery)
 echo "2. Deploying Eureka Server..."
-kubectl apply -f k8s-processed/eureka-server.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/eureka-server.yaml" -n ${NAMESPACE}
 echo "   Waiting for Eureka to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/eureka-server -n ${NAMESPACE} || echo "⚠ Eureka deployment timeout"
 
 # 3. Config Server
 echo "3. Deploying Config Server..."
-kubectl apply -f k8s-processed/config-server.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/config-server.yaml" -n ${NAMESPACE}
 echo "   Waiting for Config Server to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/config-server -n ${NAMESPACE} || echo "⚠ Config Server deployment timeout"
 
 # 4. Actuator
 echo "4. Deploying Actuator..."
-kubectl apply -f k8s-processed/actuator.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/actuator.yaml" -n ${NAMESPACE}
 
 # 5. Microservices (deploy in parallel)
 echo "5. Deploying Microservices..."
-kubectl apply -f k8s-processed/user-service.yaml -n ${NAMESPACE}
-kubectl apply -f k8s-processed/course-service.yaml -n ${NAMESPACE}
-kubectl apply -f k8s-processed/enrollment-service.yaml -n ${NAMESPACE}
-kubectl apply -f k8s-processed/content-service.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/user-service.yaml" -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/course-service.yaml" -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/enrollment-service.yaml" -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/content-service.yaml" -n ${NAMESPACE}
 
 # 6. API Gateway
 echo "6. Deploying API Gateway..."
-kubectl apply -f k8s-processed/api-gateway.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/api-gateway.yaml" -n ${NAMESPACE}
 
 # 7. Frontend
 echo "7. Deploying Frontend..."
-kubectl apply -f k8s-processed/frontend.yaml -n ${NAMESPACE}
+kubectl apply -f "${K8S_PROCESSED_DIR}/frontend.yaml" -n ${NAMESPACE}
 
 # 8. Monitoring (optional)
-if [ -f "k8s-processed/prometheus.yaml" ]; then
+if [ -f "${K8S_PROCESSED_DIR}/prometheus.yaml" ]; then
     echo "8. Deploying Prometheus..."
-    kubectl apply -f k8s-processed/prometheus.yaml -n ${NAMESPACE}
+    kubectl apply -f "${K8S_PROCESSED_DIR}/prometheus.yaml" -n ${NAMESPACE}
 fi
 
-if [ -f "k8s-processed/grafana.yaml" ]; then
+if [ -f "${K8S_PROCESSED_DIR}/grafana.yaml" ]; then
     echo "9. Deploying Grafana..."
-    kubectl apply -f k8s-processed/grafana.yaml -n ${NAMESPACE}
+    kubectl apply -f "${K8S_PROCESSED_DIR}/grafana.yaml" -n ${NAMESPACE}
 fi
 
 # Wait for deployments
