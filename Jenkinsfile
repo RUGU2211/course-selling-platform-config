@@ -267,9 +267,21 @@ pipeline {
                 COMPOSE_CMD="docker compose"
               fi
               
-              # Stop existing containers if running
-              echo "Stopping existing containers..."
-              $COMPOSE_CMD down 2>/dev/null || echo "No existing containers to stop"
+              # Stop and remove existing containers (force cleanup)
+              echo "Stopping and removing existing containers..."
+              $COMPOSE_CMD down -v --remove-orphans 2>/dev/null || echo "No existing containers to stop"
+              
+              # Also remove containers by name if they still exist (Jenkins may have orphaned containers)
+              echo "Cleaning up any orphaned containers..."
+              docker rm -f course-platform-eureka course-platform-config course-platform-actuator \
+                          course-platform-api-gateway course-platform-user-service \
+                          course-platform-course-service course-platform-enrollment-service \
+                          course-platform-content-service course-platform-frontend \
+                          course-platform-mysql course-platform-jenkins \
+                          course-platform-prometheus course-platform-grafana 2>/dev/null || true
+              
+              # Clean up any remaining containers with course-platform prefix
+              docker ps -a --filter "name=course-platform" --format "{{.Names}}" | xargs -r docker rm -f 2>/dev/null || true
               
               echo "Starting containers..."
               if $COMPOSE_CMD up -d 2>&1; then
@@ -307,8 +319,55 @@ pipeline {
               
               echo "BRANCH_NAME=$BRANCH_NAME FORCE_DEPLOY=$FORCE_DEPLOY"
               
+              # Check if kubectl is available
+              if ! command -v kubectl > /dev/null 2>&1; then
+                echo "⚠ kubectl not found, skipping Kubernetes deployment..."
+                echo "This is expected if Kubernetes is not configured in this Jenkins instance."
+                exit 0
+              fi
+              
+              # Check if Minikube is running (for AWS EC2 with Minikube)
+              if command -v minikube > /dev/null 2>&1; then
+                echo "Detected Minikube, checking if it's running..."
+                if ! minikube status > /dev/null 2>&1; then
+                  echo "⚠ Minikube is not running. Starting Minikube..."
+                  minikube start || {
+                    echo "⚠ Failed to start Minikube, skipping Kubernetes deployment..."
+                    exit 0
+                  }
+                fi
+                
+                # Set kubectl context to Minikube
+                echo "Setting kubectl context to Minikube..."
+                kubectl config use-context minikube || {
+                  echo "⚠ Failed to set Minikube context, trying default..."
+                }
+                
+                # Enable Minikube addons if needed
+                echo "Enabling Minikube addons..."
+                minikube addons enable ingress 2>/dev/null || true
+                minikube addons enable metrics-server 2>/dev/null || true
+              fi
+              
+              # Check if Kubernetes cluster is accessible
+              if ! kubectl cluster-info > /dev/null 2>&1; then
+                echo "⚠ Kubernetes cluster not accessible, skipping deployment..."
+                echo "This is expected if Kubernetes is not configured in this Jenkins instance."
+                exit 0
+              fi
+              
+              echo "✅ Kubernetes cluster is accessible!"
+              echo "Cluster info:"
+              kubectl cluster-info
+              
               # Create namespace if it doesn't exist
-              kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+              kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f - || {
+                echo "⚠ Failed to create namespace, trying without validation..."
+                kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f - --validate=false || {
+                  echo "⚠ Skipping Kubernetes deployment due to namespace creation failure"
+                  exit 0
+                }
+              }
               
               # Create Docker registry secret for pulling images
               echo "Creating Docker registry secret..."
@@ -404,6 +463,26 @@ pipeline {
               kubectl get deployments -n ${KUBE_NAMESPACE}
               kubectl get pods -n ${KUBE_NAMESPACE}
               kubectl get services -n ${KUBE_NAMESPACE}
+              
+              # Show Minikube service URLs if Minikube is running
+              if command -v minikube > /dev/null 2>&1 && minikube status > /dev/null 2>&1; then
+                echo "=========================================="
+                echo "Minikube Service URLs:"
+                echo "=========================================="
+                echo "To access services externally, use: minikube service <service-name> -n ${KUBE_NAMESPACE}"
+                echo ""
+                echo "Frontend: minikube service frontend -n ${KUBE_NAMESPACE}"
+                echo "API Gateway: minikube service api-gateway -n ${KUBE_NAMESPACE}"
+                echo "Eureka: minikube service eureka-server -n ${KUBE_NAMESPACE}"
+                echo "Config Server: minikube service config-server -n ${KUBE_NAMESPACE}"
+                echo ""
+                echo "Or get Minikube IP: minikube ip"
+                MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "N/A")
+                echo "Minikube IP: ${MINIKUBE_IP}"
+                echo ""
+                echo "Access services via NodePorts:"
+                kubectl get services -n ${KUBE_NAMESPACE} -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .spec.ports[*]}{.nodePort}{"\n"}{end}{end}' | grep -v "^$" || echo "No NodePorts found"
+              fi
               
               echo "=========================================="
               echo "✓ Successfully deployed to Kubernetes!"

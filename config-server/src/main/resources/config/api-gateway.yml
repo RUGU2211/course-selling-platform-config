@@ -8,9 +8,7 @@ spring:
         cors-configurations:
           '[/**]':
             allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:5173"
-              - "http://localhost:5174"
+              - "*"
             allowedMethods:
               - GET
               - POST
@@ -34,22 +32,29 @@ spring:
           predicates:
             - Path=/user-management-service/**
           filters:
+            - RewritePath=/user-management-service/(?<segment>.*), /$\{segment}
             - RemoveResponseHeader=Access-Control-Allow-Origin
 
         - id: course-management-service
           uri: lb://course-management-service
           predicates:
             - Path=/course-management-service/**
+          filters:
+            - RewritePath=/course-management-service/(?<segment>.*), /$\{segment}
 
         - id: enrollment-service
           uri: lb://enrollmentservice
           predicates:
             - Path=/enrollment-service/**
+          filters:
+            - RewritePath=/enrollment-service/(?<segment>.*), /$\{segment}
 
         - id: content-delivery-service
           uri: lb://content-delivery-service
           predicates:
             - Path=/content-delivery-service/**
+          filters:
+            - RewritePath=/content-delivery-service/(?<segment>.*), /$\{segment}
 
         - id: payment-service
           uri: lb://payment-service
